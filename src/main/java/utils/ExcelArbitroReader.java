@@ -1,9 +1,9 @@
-package main.utils;
+package utils;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import main.model.Arbitro;
+import model.Arbitro;
 
 import java.io.FileInputStream;
 import java.util.ArrayList;

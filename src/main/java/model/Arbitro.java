@@ -1,5 +1,6 @@
-package main.model;
+package model;
 
+import model.Disponibilidad;
 import java.util.ArrayList;
 import java.util.List;
 
