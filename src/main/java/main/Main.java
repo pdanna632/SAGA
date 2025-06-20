@@ -3,8 +3,9 @@ package main;
 import java.util.List;
 import java.util.Scanner;
 
-import main.model.Arbitro;
-import main.utils.ExcelArbitroReader;
+import model.Arbitro;
+import utils.ExcelArbitroReader;
+
 
 
 public class Main {
