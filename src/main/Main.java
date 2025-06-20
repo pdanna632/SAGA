@@ -1,3 +1,6 @@
+// filepath: d:\uni\Ing Software\Projecto\proyecto 1\SAGA\src\main\Main.java
+package main;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import model.Arbitro;
