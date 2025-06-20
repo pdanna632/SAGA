@@ -49,9 +49,9 @@ Este proyecto está pensado como herramienta para Arbiantioquia, con el objetivo
 
 ## Licencia
 
-MIT License (puedes adaptarla si tienes otra en mente)
+MIT License
 
-## Notas para desarrolladores (Copilot incluido)
+## Notas para desarrolladores 
 
 Este proyecto sigue una estructura modular en Java. Cada carpeta contiene lógica separada para entidades como usuarios, árbitros y reportes. Las funcionalidades deben manejar archivos Excel como fuente de datos. El objetivo es una futura migración fluida a una interfaz gráfica hecha en React.
 
