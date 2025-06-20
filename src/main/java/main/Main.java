@@ -2,8 +2,10 @@ package main;
 
 import java.util.List;
 import java.util.Scanner;
-import model.Arbitro;
-import utils.ExcelArbitroReader;
+
+import main.model.Arbitro;
+import main.utils.ExcelArbitroReader;
+
 
 public class Main {
     public static void main(String[] args) {
@@ -47,7 +49,7 @@ public class Main {
     private static void mostrarArbitrosDisponibles() {
         System.out.println("\n===== Árbitros disponibles =====");
 
-        String ruta = "data/Arbitros.xlsx";
+        String ruta = "src/main/resources/data/Arbitros.xlsx";
         List<Arbitro> arbitros = ExcelArbitroReader.leerArbitros(ruta);
 
         if (arbitros.isEmpty()) {
