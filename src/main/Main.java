@@ -18,21 +18,19 @@ public class Main {
             int opcion;
             do {
                 System.out.println("\n===== SAGA - Sistema Automatizado de Gestión Arbitral =====");
-                System.out.println("1. Verificación de identidad del usuario (por implementar)");
-                System.out.println("2. Visualización de árbitros disponibles (por implementar)");
-                System.out.println("3. Asignación de árbitros a partidos o eventos (por implementar)");
-                System.out.println("4. Generación de informes semanales (por implementar)");
-                System.out.println("5. Modificación extemporánea de asignaciones (por implementar)");
+                System.out.println("1. Visualización de árbitros disponibles (por implementar)");
+                System.out.println("2. Asignación de árbitros a partidos o eventos (por implementar)");
+                System.out.println("3. Generación de informes semanales (por implementar)");
+                System.out.println("4. Modificación extemporánea de asignaciones (por implementar)");
                 System.out.println("0. Salir");
                 System.out.print("Seleccione una opción: ");
                 opcion = scanner.nextInt();
                 scanner.nextLine(); // Limpiar buffer
                 switch (opcion) {
-                    case 1 -> System.out.println("Funcionalidad de verificación de identidad (por implementar)");
-                    case 2 -> System.out.println("Funcionalidad de visualización de árbitros disponibles (por implementar)");
-                    case 3 -> System.out.println("Funcionalidad de asignación de árbitros (por implementar)");
-                    case 4 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
-                    case 5 -> System.out.println("Funcionalidad de modificación extemporánea de asignaciones (por implementar)");
+                    case 1 -> System.out.println("Funcionalidad de visualización de árbitros disponibles (por implementar)");
+                    case 2 -> System.out.println("Funcionalidad de asignación de árbitros (por implementar)");
+                    case 3 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
+                    case 4 -> System.out.println("Funcionalidad de modificación extemporánea de asignaciones (por implementar)");
                     case 0 -> System.out.println("Saliendo del sistema. ¡Hasta luego!");
                     default -> System.out.println("Opción no válida. Intente de nuevo.");
                 }
