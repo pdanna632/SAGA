@@ -1,39 +1,85 @@
 package model;
 
-
-import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Disponibilidad {
-    private LocalDate fecha;
-    private LocalTime horaInicio;
-    private LocalTime horaFin;
+    private Map<String, List<FranjaHoraria>> disponibilidadSemanal;
 
-    public Disponibilidad(LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
-        this.fecha = fecha;
-        this.horaInicio = horaInicio;
-        this.horaFin = horaFin;
+    public Disponibilidad() {
+        disponibilidadSemanal = new HashMap<>();
+        inicializarDias();
     }
 
-    public LocalDate getFecha() {
-        return fecha;
+    private void inicializarDias() {
+        String[] dias = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+        for (String dia : dias) {
+            disponibilidadSemanal.put(dia, new ArrayList<>());
+        }
     }
 
-    public LocalTime getHoraInicio() {
-        return horaInicio;
+    public void agregarDisponibilidad(String dia, LocalTime inicio, LocalTime fin) {
+        if (!disponibilidadSemanal.containsKey(dia)) {
+            throw new IllegalArgumentException("Día inválido: " + dia);
+        }
+        disponibilidadSemanal.get(dia).add(new FranjaHoraria(inicio, fin));
     }
 
-    public LocalTime getHoraFin() {
-        return horaFin;
+    public void eliminarDisponibilidad(String dia, LocalTime inicio, LocalTime fin) {
+        if (!disponibilidadSemanal.containsKey(dia)) {
+            throw new IllegalArgumentException("Día inválido: " + dia);
+        }
+        disponibilidadSemanal.get(dia).removeIf(franja -> franja.getInicio().equals(inicio) && franja.getFin().equals(fin));
     }
 
+    public List<FranjaHoraria> consultarDisponibilidad(String dia) {
+        if (!disponibilidadSemanal.containsKey(dia)) {
+            throw new IllegalArgumentException("Día inválido: " + dia);
+        }
+        return disponibilidadSemanal.get(dia);
+    }
+
+    @Override
     public String toString() {
-        return fecha + " de " + horaInicio + " a " + horaFin;
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, List<FranjaHoraria>> entry : disponibilidadSemanal.entrySet()) {
+            sb.append(entry.getKey()).append(": ");
+            if (entry.getValue().isEmpty()) {
+                sb.append("No disponible\n");
+            } else {
+                for (FranjaHoraria franja : entry.getValue()) {
+                    sb.append(franja).append(", ");
+                }
+                sb.setLength(sb.length() - 2); // Eliminar la última coma
+                sb.append("\n");
+            }
+        }
+        return sb.toString();
     }
 
+    private static class FranjaHoraria {
+        private LocalTime inicio;
+        private LocalTime fin;
 
-    public boolean seSuperponeCon(Disponibilidad otra) {
-        return this.fecha.equals(otra.fecha) &&
-               !(this.horaFin.isBefore(otra.horaInicio) || this.horaInicio.isAfter(otra.horaFin));
+        public FranjaHoraria(LocalTime inicio, LocalTime fin) {
+            this.inicio = inicio;
+            this.fin = fin;
+        }
+
+        public LocalTime getInicio() {
+            return inicio;
+        }
+
+        public LocalTime getFin() {
+            return fin;
+        }
+
+        @Override
+        public String toString() {
+            return inicio + " a " + fin;
+        }
     }
 }
