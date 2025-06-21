@@ -1,16 +1,19 @@
 package main;
 
+import java.io.File;
 import java.util.List;
 import java.util.Scanner;
 
 import model.Arbitro;
 import utils.ExcelArbitroReader;
-
-
+import utils.ExcelDisponibilidadWriter;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("===== Bienvenido a SAGA - Sistema Automatizado de Gestión Arbitral =====");
+
+        // Generar archivo de disponibilidades si no existe
+        generarArchivoDisponibilidadesSiNoExiste();
 
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.print("Ingrese el usuario: ");
@@ -62,6 +65,37 @@ public class Main {
             if (a.isActivo()) {
                 System.out.println(a);
             }
+        }
+    }
+
+    private static void generarArchivoDisponibilidadesSiNoExiste() {
+        System.out.println("\n===== Verificando archivo de disponibilidades =====");
+
+        String rutaArbitros = "src/main/resources/data/Arbitros.xlsx";
+        String rutaDisponibilidades = "src/main/resources/data/disponibilidades";
+
+        // Crear la carpeta si no existe
+        File carpeta = new File(rutaDisponibilidades);
+        if (!carpeta.exists()) {
+            carpeta.mkdirs();
+        }
+
+        // Generar nombre del archivo basado en la fecha actual
+        String nombreArchivo = String.format("disponibilidades_%s.xlsx", java.time.LocalDate.now().toString());
+        File archivo = new File(rutaDisponibilidades, nombreArchivo);
+
+        if (!archivo.exists()) {
+            System.out.println("El archivo de disponibilidades no existe. Generando...");
+            List<Arbitro> arbitros = ExcelArbitroReader.leerArbitros(rutaArbitros);
+
+            if (arbitros.isEmpty()) {
+                System.out.println("No se encontraron árbitros para generar el archivo de disponibilidades.");
+                return;
+            }
+
+            ExcelDisponibilidadWriter.generarArchivoDisponibilidades(arbitros, rutaDisponibilidades);
+        } else {
+            System.out.println("El archivo de disponibilidades ya existe: " + archivo.getAbsolutePath());
         }
     }
 }
