@@ -7,9 +7,18 @@ import java.util.List;
 import java.util.Map;
 
 public class Disponibilidad {
+    private String cedulaArbitro; // Nueva propiedad para asociar la disponibilidad con un árbitro
     private Map<String, List<FranjaHoraria>> disponibilidadSemanal;
 
+    // Constructor sin argumentos
     public Disponibilidad() {
+        disponibilidadSemanal = new HashMap<>();
+        inicializarDias();
+    }
+
+    // Constructor con cédula del árbitro
+    public Disponibilidad(String cedulaArbitro) {
+        this.cedulaArbitro = cedulaArbitro; // Asociar la cédula del árbitro
         disponibilidadSemanal = new HashMap<>();
         inicializarDias();
     }
@@ -42,6 +51,14 @@ public class Disponibilidad {
         return disponibilidadSemanal.get(dia);
     }
 
+    public Map<String, List<FranjaHoraria>> getDisponibilidadSemanal() {
+        return disponibilidadSemanal;
+    }
+
+    public String getCedulaArbitro() {
+        return cedulaArbitro;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -60,7 +77,7 @@ public class Disponibilidad {
         return sb.toString();
     }
 
-    private static class FranjaHoraria {
+    public static class FranjaHoraria {
         private LocalTime inicio;
         private LocalTime fin;
 

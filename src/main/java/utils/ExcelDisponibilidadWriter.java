@@ -1,10 +1,13 @@
 package utils;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
@@ -21,6 +24,7 @@ import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import model.Arbitro;
+import model.Disponibilidad;
 
 public class ExcelDisponibilidadWriter {
 
@@ -57,7 +61,7 @@ public class ExcelDisponibilidadWriter {
             agregarArbitros(sheet, arbitros, estiloNoDisponible);
 
             // Ajustar columnas
-            for (int i = 0; i < 31; i++) { // Ajustar para incluir todas las columnas (con espacios)
+            for (int i = 0; i < 27; i++) { // Ajustar para incluir todas las columnas
                 sheet.autoSizeColumn(i);
             }
 
@@ -124,8 +128,7 @@ public class ExcelDisponibilidadWriter {
                 celdaHorario.setCellValue(horarios[i]);
             }
 
-            // Agregar una columna de espacio entre días
-            colInicio += 7; // Avanzar 6 columnas para el día + 1 columna de espacio
+            colInicio += 6; // Avanzar 6 columnas para el siguiente día
         }
     }
 
@@ -138,12 +141,99 @@ public class ExcelDisponibilidadWriter {
             fila.createCell(1).setCellValue(arbitro.getNombre());
             fila.createCell(2).setCellValue(arbitro.getCategoria());
 
-            // Inicializar todas las celdas de disponibilidad como "No"
-            for (int col = 3; col < 31; col++) { // Ajustar para incluir columnas adicionales (con espacios)
+            // Inicializar todas las celdas de disponibilidad como coloreadas
+            for (int col = 3; col < 27; col++) { // Ajustar para incluir todas las columnas
                 Cell celda = fila.createCell(col);
-                celda.setCellValue("No");
-                celda.setCellStyle(estiloNoDisponible);
+                celda.setCellStyle(estiloNoDisponible); // Aplicar color sin texto
             }
+        }
+    }
+
+    public static void actualizarDisponibilidades(String rutaArchivo, Disponibilidad disponibilidad) {
+        File archivo = new File(rutaArchivo);
+
+        try (Workbook workbook = archivo.exists() ? new XSSFWorkbook(new FileInputStream(archivo)) : new XSSFWorkbook()) {
+            Sheet sheet = workbook.getSheet("Disponibilidades");
+            if (sheet == null) {
+                sheet = workbook.createSheet("Disponibilidades");
+                crearEncabezados(sheet, workbook);
+            }
+
+            // Escribir disponibilidades
+            for (Map.Entry<String, List<Disponibilidad.FranjaHoraria>> entry : disponibilidad.getDisponibilidadSemanal().entrySet()) {
+                String dia = entry.getKey();
+                List<Disponibilidad.FranjaHoraria> franjas = entry.getValue();
+
+                for (int filaIndex = 2; filaIndex <= sheet.getLastRowNum(); filaIndex++) {
+                    Row fila = sheet.getRow(filaIndex);
+                    if (fila == null) continue;
+
+                    // Verificar si la fila corresponde al árbitro modificado
+                    String cedulaExcel = fila.getCell(0).getStringCellValue();
+                    if (disponibilidad.getCedulaArbitro() == null || !disponibilidad.getCedulaArbitro().equals(cedulaExcel)) {
+                        continue;
+                    }
+
+                    int colInicio = 3 + (dia.equals("Jueves") ? 0 : dia.equals("Viernes") ? 6 : dia.equals("Sábado") ? 12 : 18);
+
+                    for (Disponibilidad.FranjaHoraria franja : franjas) {
+                        LocalTime inicio = franja.getInicio();
+                        LocalTime fin = franja.getFin();
+
+                        // Iterar sobre las franjas de 2 horas dentro del rango de tiempo
+                        while (!inicio.equals(fin)) {
+                            int col = colInicio + ((inicio.getHour() - 8) / 2); // Calcular la columna correspondiente
+                            Cell celda = fila.getCell(col);
+                            if (celda == null) {
+                                celda = fila.createCell(col);
+                            }
+
+                            // Configurar estilo de celda para disponibilidad (color verde)
+                            CellStyle estilo = workbook.createCellStyle();
+                            estilo.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+                            estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                            estilo.setBorderBottom(BorderStyle.THIN);
+                            estilo.setBorderTop(BorderStyle.THIN);
+                            estilo.setBorderLeft(BorderStyle.THIN);
+                            estilo.setBorderRight(BorderStyle.THIN);
+                            celda.setCellStyle(estilo);
+
+                            // Avanzar 2 horas
+                            inicio = inicio.plusHours(2);
+                        }
+                    }
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(archivo)) {
+                workbook.write(fos);
+            }
+
+            System.out.println("Disponibilidades actualizadas correctamente en el archivo Excel.");
+        } catch (Exception e) {
+            System.err.println("⚠️ Error al actualizar el archivo Excel de disponibilidades: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void crearEncabezados(Sheet sheet, Workbook workbook) {
+        Row filaDias = sheet.createRow(0);
+        Row filaHorarios = sheet.createRow(1);
+
+        String[] dias = {"Jueves", "Viernes", "Sábado", "Domingo"};
+        int colInicio = 3;
+
+        for (String dia : dias) {
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, colInicio, colInicio + 5));
+            Cell celdaDia = filaDias.createCell(colInicio);
+            celdaDia.setCellValue(dia);
+
+            String[] horarios = {"8:00", "10:00", "12:00", "14:00", "16:00", "18:00"};
+            for (int i = 0; i < horarios.length; i++) {
+                filaHorarios.createCell(colInicio + i).setCellValue(horarios[i]);
+            }
+
+            colInicio += 6;
         }
     }
 }
