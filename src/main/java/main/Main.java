@@ -5,12 +5,12 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime; 
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import model.Arbitro;
 import model.Disponibilidad;
 import utils.ExcelArbitroReader;
-import utils.ExcelDisponibilidadReader;
 import utils.ExcelDisponibilidadWriter;
 
 public class Main {
@@ -21,7 +21,21 @@ public class Main {
 
         // Crear objetos desde los archivos Excel
         List<Arbitro> arbitros = cargarArbitros();
-        Disponibilidad disponibilidad = cargarDisponibilidades();
+        String rutaDisponibilidades = calcularRutaDisponibilidades();
+        File archivoDisponibilidades = new File(rutaDisponibilidades);
+        if (!archivoDisponibilidades.exists()) {
+            System.out.println("El archivo de disponibilidades no existe. Generando...");
+            ExcelDisponibilidadWriter.generarArchivoDisponibilidades(arbitros, "src/main/resources/data/disponibilidades");
+        }
+        // Leer todas las disponibilidades y asociarlas a cada árbitro
+        Map<String, Disponibilidad> mapaDisponibilidades = utils.ExcelDisponibilidadReader.leerTodasLasDisponibilidades(rutaDisponibilidades);
+        for (Arbitro arbitro : arbitros) {
+            Disponibilidad disp = mapaDisponibilidades.get(arbitro.getCedula());
+            if (disp != null) {
+                arbitro.getDisponibilidades().clear();
+                arbitro.agregarDisponibilidad(disp);
+            }
+        }
 
         if (!TESTING_MODE) {
             try (Scanner scanner = new Scanner(System.in)) {
@@ -62,24 +76,22 @@ public class Main {
                     case 5 -> {
                         System.out.print("\nIngrese la cédula del árbitro que desea modificar: ");
                         String cedula = scanner.nextLine();
-
                         Arbitro arbitro = arbitros.stream()
                                 .filter(a -> a.getCedula().equals(cedula))
                                 .findFirst()
                                 .orElse(null);
-
                         if (arbitro == null) {
                             System.out.println("No se encontró un árbitro con la cédula proporcionada.");
                         } else {
-                            modificarDisponibilidad(arbitro); // Llamada simplificada
+                            modificarDisponibilidad(arbitro);
                         }
                     }
-                    case 6 -> mostrarExtras(arbitros, disponibilidad);
+                    case 6 -> mostrarExtras(arbitros);
                     case 0 -> {
                         System.out.println("Guardando cambios en las disponibilidades...");
-                        String rutaDisponibilidades = calcularRutaDisponibilidades();
-                        ExcelDisponibilidadWriter.actualizarDisponibilidades(rutaDisponibilidades, arbitros); // Pasar la lista de árbitros
-                        System.out.println("Saliendo del sistema. ¡Hasta luego!");
+                        String ruta = calcularRutaDisponibilidades();
+                        utils.ExcelDisponibilidadWriter.actualizarDisponibilidades(ruta, arbitros);
+                        System.out.println("¡Hasta luego!");
                     }
                     default -> System.out.println("Opción no válida. Intente de nuevo.");
                 }
@@ -113,41 +125,35 @@ public class Main {
         return arbitros;
     }
 
-    private static Disponibilidad cargarDisponibilidades() {
-        System.out.println("\n===== Cargando disponibilidades desde el archivo Excel =====");
-
-        String rutaDisponibilidades = calcularRutaDisponibilidades();
-        File archivoDisponibilidades = new File(rutaDisponibilidades);
-
-        if (!archivoDisponibilidades.exists()) {
-            System.out.println("El archivo de disponibilidades no existe. Generando...");
-            List<Arbitro> arbitros = cargarArbitros(); // Cargar árbitros para generar el archivo
-            ExcelDisponibilidadWriter.generarArchivoDisponibilidades(arbitros, "src/main/resources/data/disponibilidades");
-        }
-
-        Disponibilidad disponibilidad = ExcelDisponibilidadReader.leerDisponibilidades(rutaDisponibilidades);
-
-        if (disponibilidad == null) {
-            System.out.println("No se encontraron disponibilidades en el archivo.");
-        } else {
-            System.out.println("Disponibilidades cargadas correctamente.");
-        }
-
-        return disponibilidad;
-    }
-
     private static void mostrarArbitrosDisponibles(List<Arbitro> arbitros) {
-        System.out.println("\n===== Árbitros disponibles =====");
-
-        if (arbitros.isEmpty()) {
-            System.out.println("No se encontraron árbitros.");
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\n===== Consulta de árbitros disponibles =====");
+        System.out.print("Ingrese el día (Jueves, Viernes, Sábado, Domingo): ");
+        String dia = scanner.nextLine().trim();
+        System.out.print("Ingrese la hora de inicio (formato HH:mm, ej: 12:00): ");
+        String horaStr = scanner.nextLine().trim();
+        LocalTime hora;
+        try {
+            hora = LocalTime.parse(horaStr.length() == 4 ? "0" + horaStr : horaStr);
+        } catch (Exception e) {
+            System.out.println("Hora inválida. Debe ser en formato HH:mm");
             return;
         }
-
+        boolean alguno = false;
         for (Arbitro a : arbitros) {
-            if (a.isActivo()) {
-                System.out.println(a);
+            if (!a.isActivo()) continue;
+            for (Disponibilidad disp : a.getDisponibilidades()) {
+                for (Disponibilidad.FranjaHoraria franja : disp.consultarDisponibilidad(dia)) {
+                    if (!hora.isBefore(franja.getInicio()) && hora.isBefore(franja.getFin())) {
+                        System.out.println(a);
+                        alguno = true;
+                        break;
+                    }
+                }
             }
+        }
+        if (!alguno) {
+            System.out.println("No hay árbitros disponibles en ese día y hora.");
         }
     }
 
@@ -251,55 +257,51 @@ public class Main {
         }
     }
 
-    private static void mostrarExtras(List<Arbitro> arbitros, Disponibilidad disponibilidad) {
+    private static void mostrarExtras(List<Arbitro> arbitros) {
         Scanner scanner = new Scanner(System.in);
-
         System.out.println("\n===== Extras =====");
         System.out.println("1. Mostrar información de un árbitro");
         System.out.print("Seleccione una opción: ");
         int opcion = scanner.nextInt();
         scanner.nextLine(); // Limpiar buffer
-
         if (opcion == 1) {
-            mostrarArbitro(arbitros, disponibilidad);
+            mostrarArbitro(arbitros);
         } else {
             System.out.println("Opción no válida.");
         }
     }
 
-    private static void mostrarArbitro(List<Arbitro> arbitros, Disponibilidad disponibilidad) {
+    private static void mostrarArbitro(List<Arbitro> arbitros) {
         Scanner scanner = new Scanner(System.in);
-
         System.out.print("\nIngrese la cédula del árbitro que desea consultar: ");
         String cedula = scanner.nextLine();
-
         Arbitro arbitro = arbitros.stream()
                 .filter(a -> a.getCedula().equals(cedula))
                 .findFirst()
                 .orElse(null);
-
         if (arbitro == null) {
             System.out.println("No se encontró un árbitro con la cédula proporcionada.");
             return;
         }
-
         System.out.println("\nInformación del árbitro:");
         System.out.println("Nombre: " + arbitro.getNombre());
         System.out.println("Categoría: " + arbitro.getCategoria());
         System.out.println("Activo: " + (arbitro.isActivo() ? "Sí" : "No"));
-
         System.out.println("\nDisponibilidad:");
         boolean tieneDisponibilidad = false;
-        for (String dia : disponibilidad.getDisponibilidadSemanal().keySet()) {
-            List<Disponibilidad.FranjaHoraria> franjas = disponibilidad.consultarDisponibilidad(dia);
-            if (!franjas.isEmpty()) {
-                tieneDisponibilidad = true;
-                System.out.print(dia + ": ");
-                franjas.forEach(franja -> System.out.print(franja.getInicio() + " a " + franja.getFin() + ", "));
-                System.out.println();
+        for (Disponibilidad disp : arbitro.getDisponibilidades()) {
+            for (String dia : disp.getDisponibilidadSemanal().keySet()) {
+                List<Disponibilidad.FranjaHoraria> franjas = disp.consultarDisponibilidad(dia);
+                if (!franjas.isEmpty()) {
+                    tieneDisponibilidad = true;
+                    System.out.print(dia + ": ");
+                    for (Disponibilidad.FranjaHoraria franja : franjas) {
+                        System.out.print(franja + ", ");
+                    }
+                    System.out.println();
+                }
             }
         }
-
         if (!tieneDisponibilidad) {
             System.out.println("No tiene disponibilidad.");
         }
