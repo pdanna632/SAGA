@@ -149,7 +149,7 @@ public class ExcelDisponibilidadWriter {
         }
     }
 
-    public static void actualizarDisponibilidades(String rutaArchivo, Disponibilidad disponibilidad) {
+    public static void actualizarDisponibilidades(String rutaArchivo, List<Arbitro> arbitros) {
         File archivo = new File(rutaArchivo);
 
         try (Workbook workbook = archivo.exists() ? new XSSFWorkbook(new FileInputStream(archivo)) : new XSSFWorkbook()) {
@@ -159,49 +159,65 @@ public class ExcelDisponibilidadWriter {
                 crearEncabezados(sheet, workbook);
             }
 
-            // Escribir disponibilidades
-            for (Map.Entry<String, List<Disponibilidad.FranjaHoraria>> entry : disponibilidad.getDisponibilidadSemanal().entrySet()) {
-                String dia = entry.getKey();
-                List<Disponibilidad.FranjaHoraria> franjas = entry.getValue();
+            // Iterar sobre todos los árbitros
+            for (Arbitro arbitro : arbitros) {
+                String cedulaArbitro = arbitro.getCedula();
+                List<Disponibilidad> disponibilidades = arbitro.getDisponibilidades(); // Obtener la lista de disponibilidades del árbitro
 
+                boolean filaEncontrada = false; // Bandera para detener la iteración una vez que se encuentra la fila correcta
                 for (int filaIndex = 2; filaIndex <= sheet.getLastRowNum(); filaIndex++) {
                     Row fila = sheet.getRow(filaIndex);
                     if (fila == null) continue;
 
-                    // Verificar si la fila corresponde al árbitro modificado
+                    // Verificar si la fila corresponde al árbitro actual
                     String cedulaExcel = fila.getCell(0).getStringCellValue();
-                    if (disponibilidad.getCedulaArbitro() == null || !disponibilidad.getCedulaArbitro().equals(cedulaExcel)) {
+                    if (cedulaArbitro == null || !cedulaArbitro.equals(cedulaExcel)) {
                         continue;
                     }
 
-                    int colInicio = 3 + (dia.equals("Jueves") ? 0 : dia.equals("Viernes") ? 6 : dia.equals("Sábado") ? 12 : 18);
+                    // Escribir las disponibilidades en la fila correspondiente
+                    for (Disponibilidad disponibilidad : disponibilidades) {
+                        for (Map.Entry<String, List<Disponibilidad.FranjaHoraria>> entry : disponibilidad.getDisponibilidadSemanal().entrySet()) {
+                            String dia = entry.getKey();
+                            List<Disponibilidad.FranjaHoraria> franjas = entry.getValue();
 
-                    for (Disponibilidad.FranjaHoraria franja : franjas) {
-                        LocalTime inicio = franja.getInicio();
-                        LocalTime fin = franja.getFin();
+                            int colInicio = 3 + (dia.equals("Jueves") ? 0 : dia.equals("Viernes") ? 6 : dia.equals("Sábado") ? 12 : 18);
 
-                        // Iterar sobre las franjas de 2 horas dentro del rango de tiempo
-                        while (!inicio.equals(fin)) {
-                            int col = colInicio + ((inicio.getHour() - 8) / 2); // Calcular la columna correspondiente
-                            Cell celda = fila.getCell(col);
-                            if (celda == null) {
-                                celda = fila.createCell(col);
+                            for (Disponibilidad.FranjaHoraria franja : franjas) {
+                                LocalTime inicio = franja.getInicio();
+                                LocalTime fin = franja.getFin();
+
+                                // Iterar sobre las franjas de 2 horas dentro del rango de tiempo
+                                while (!inicio.equals(fin)) {
+                                    int col = colInicio + ((inicio.getHour() - 8) / 2); // Calcular la columna correspondiente
+                                    Cell celda = fila.getCell(col);
+                                    if (celda == null) {
+                                        celda = fila.createCell(col);
+                                    }
+
+                                    // Configurar estilo de celda para disponibilidad (color verde)
+                                    CellStyle estilo = workbook.createCellStyle();
+                                    estilo.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+                                    estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                                    estilo.setBorderBottom(BorderStyle.THIN);
+                                    estilo.setBorderTop(BorderStyle.THIN);
+                                    estilo.setBorderLeft(BorderStyle.THIN);
+                                    estilo.setBorderRight(BorderStyle.THIN);
+                                    celda.setCellStyle(estilo);
+
+                                    // Avanzar 2 horas
+                                    inicio = inicio.plusHours(2);
+                                }
                             }
-
-                            // Configurar estilo de celda para disponibilidad (color verde)
-                            CellStyle estilo = workbook.createCellStyle();
-                            estilo.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
-                            estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-                            estilo.setBorderBottom(BorderStyle.THIN);
-                            estilo.setBorderTop(BorderStyle.THIN);
-                            estilo.setBorderLeft(BorderStyle.THIN);
-                            estilo.setBorderRight(BorderStyle.THIN);
-                            celda.setCellStyle(estilo);
-
-                            // Avanzar 2 horas
-                            inicio = inicio.plusHours(2);
                         }
                     }
+
+                    filaEncontrada = true; // Marcar que la fila correcta fue encontrada
+                    break; // Detener la iteración
+                }
+
+                if (!filaEncontrada) {
+                    System.err.println("⚠️ No se encontró la fila correspondiente al árbitro con cédula: " + cedulaArbitro);
                 }
             }
 
@@ -212,6 +228,102 @@ public class ExcelDisponibilidadWriter {
             System.out.println("Disponibilidades actualizadas correctamente en el archivo Excel.");
         } catch (Exception e) {
             System.err.println("⚠️ Error al actualizar el archivo Excel de disponibilidades: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void actualizarDisponibilidadArbitro(String rutaBase, Arbitro arbitro) {
+        // Calcular la ruta completa del archivo Excel
+        LocalDate hoy = LocalDate.now();
+        LocalDate primerDiaSemana = hoy.with(DayOfWeek.MONDAY);
+        LocalDate ultimoDiaSemana = hoy.with(DayOfWeek.SUNDAY);
+        String nombreArchivo = String.format("disponibilidades_%02d %02d a %02d %d.xlsx",
+                primerDiaSemana.getMonthValue(),
+                primerDiaSemana.getDayOfMonth(),
+                ultimoDiaSemana.getDayOfMonth(),
+                primerDiaSemana.getYear());
+        String rutaArchivo = rutaBase + File.separator + nombreArchivo;
+
+        File archivo = new File(rutaArchivo);
+
+        if (!archivo.exists()) {
+            System.err.println("⚠️ El archivo no existe: " + rutaArchivo);
+            return;
+        }
+
+        try (Workbook workbook = new XSSFWorkbook(new FileInputStream(archivo))) {
+            Sheet sheet = workbook.getSheet("Disponibilidades");
+            if (sheet == null) {
+                System.err.println("⚠️ La hoja 'Disponibilidades' no existe en el archivo: " + rutaArchivo);
+                return;
+            }
+
+            String cedulaArbitro = arbitro.getCedula();
+            List<Disponibilidad> disponibilidades = arbitro.getDisponibilidades(); // Obtener la lista de disponibilidades del árbitro
+
+            boolean filaEncontrada = false; // Bandera para detener la iteración una vez que se encuentra la fila correcta
+            for (int filaIndex = 2; filaIndex <= sheet.getLastRowNum(); filaIndex++) {
+                Row fila = sheet.getRow(filaIndex);
+                if (fila == null) continue;
+
+                // Verificar si la fila corresponde al árbitro actual
+                String cedulaExcel = fila.getCell(0).getStringCellValue();
+                if (cedulaArbitro == null || !cedulaArbitro.equals(cedulaExcel)) {
+                    continue;
+                }
+
+                // Escribir las disponibilidades en la fila correspondiente
+                for (Disponibilidad disponibilidad : disponibilidades) {
+                    for (Map.Entry<String, List<Disponibilidad.FranjaHoraria>> entry : disponibilidad.getDisponibilidadSemanal().entrySet()) {
+                        String dia = entry.getKey();
+                        List<Disponibilidad.FranjaHoraria> franjas = entry.getValue();
+
+                        int colInicio = 3 + (dia.equals("Jueves") ? 0 : dia.equals("Viernes") ? 6 : dia.equals("Sábado") ? 12 : 18);
+
+                        for (Disponibilidad.FranjaHoraria franja : franjas) {
+                            LocalTime inicio = franja.getInicio();
+                            LocalTime fin = franja.getFin();
+
+                            // Iterar sobre las franjas de 2 horas dentro del rango de tiempo
+                            while (!inicio.equals(fin)) {
+                                int col = colInicio + ((inicio.getHour() - 8) / 2); // Calcular la columna correspondiente
+                                Cell celda = fila.getCell(col);
+                                if (celda == null) {
+                                    celda = fila.createCell(col);
+                                }
+
+                                // Configurar estilo de celda para disponibilidad (color verde)
+                                CellStyle estilo = workbook.createCellStyle();
+                                estilo.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+                                estilo.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                                estilo.setBorderBottom(BorderStyle.THIN);
+                                estilo.setBorderTop(BorderStyle.THIN);
+                                estilo.setBorderLeft(BorderStyle.THIN);
+                                estilo.setBorderRight(BorderStyle.THIN);
+                                celda.setCellStyle(estilo);
+
+                                // Avanzar 2 horas
+                                inicio = inicio.plusHours(2);
+                            }
+                        }
+                    }
+                }
+
+                filaEncontrada = true; // Marcar que la fila correcta fue encontrada
+                break; // Detener la iteración
+            }
+
+            if (!filaEncontrada) {
+                System.err.println("⚠️ No se encontró la fila correspondiente al árbitro con cédula: " + cedulaArbitro);
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(archivo)) {
+                workbook.write(fos);
+            }
+
+            System.out.println("Disponibilidad actualizada correctamente para el árbitro con cédula: " + cedulaArbitro);
+        } catch (Exception e) {
+            System.err.println("⚠️ Error al actualizar la disponibilidad del árbitro en el archivo Excel: " + e.getMessage());
             e.printStackTrace();
         }
     }

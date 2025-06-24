@@ -14,6 +14,8 @@ import utils.ExcelDisponibilidadReader;
 import utils.ExcelDisponibilidadWriter;
 
 public class Main {
+    private static final boolean TESTING_MODE = true; // Cambiar a 'false' para desactivar el modo de prueba
+
     public static void main(String[] args) {
         System.out.println("===== Bienvenido a SAGA - Sistema Automatizado de Gestión Arbitral =====");
 
@@ -21,18 +23,24 @@ public class Main {
         List<Arbitro> arbitros = cargarArbitros();
         Disponibilidad disponibilidad = cargarDisponibilidades();
 
-        try (Scanner scanner = new Scanner(System.in)) {
-            System.out.print("Ingrese el usuario: ");
-            String usuario = scanner.nextLine();
-            System.out.print("Ingrese la contraseña: ");
-            String contrasena = scanner.nextLine();
+        if (!TESTING_MODE) {
+            try (Scanner scanner = new Scanner(System.in)) {
+                System.out.print("Ingrese el usuario: ");
+                String usuario = scanner.nextLine();
+                System.out.print("Ingrese la contraseña: ");
+                String contrasena = scanner.nextLine();
 
-            if (!usuario.equals("ARBIANTIOQUIA") || !contrasena.equals("ADMIN")) {
-                System.out.println("Credenciales incorrectas. Acceso denegado.");
-                return;
+                if (!usuario.equals("ARBIANTIOQUIA") || !contrasena.equals("ADMIN")) {
+                    System.out.println("Credenciales incorrectas. Acceso denegado.");
+                    return;
+                }
             }
+        } else {
+            System.out.println("Modo de prueba activado. Saltando validación de credenciales...");
+        }
 
-            int opcion;
+        int opcion;
+        try (Scanner scanner = new Scanner(System.in)) {
             do {
                 System.out.println("\n===== SAGA - Sistema Automatizado de Gestión Arbitral =====");
                 System.out.println("1. Visualización de árbitros disponibles");
@@ -51,12 +59,26 @@ public class Main {
                     case 2 -> System.out.println("Funcionalidad de asignación de árbitros (por implementar)");
                     case 3 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
                     case 4 -> System.out.println("Funcionalidad de modificación extemporánea de asignaciones (por implementar)");
-                    case 5 -> modificarDisponibilidad(arbitros, disponibilidad);
+                    case 5 -> {
+                        System.out.print("\nIngrese la cédula del árbitro que desea modificar: ");
+                        String cedula = scanner.nextLine();
+
+                        Arbitro arbitro = arbitros.stream()
+                                .filter(a -> a.getCedula().equals(cedula))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (arbitro == null) {
+                            System.out.println("No se encontró un árbitro con la cédula proporcionada.");
+                        } else {
+                            modificarDisponibilidad(arbitro); // Llamada simplificada
+                        }
+                    }
                     case 6 -> mostrarExtras(arbitros, disponibilidad);
                     case 0 -> {
                         System.out.println("Guardando cambios en las disponibilidades...");
                         String rutaDisponibilidades = calcularRutaDisponibilidades();
-                        ExcelDisponibilidadWriter.actualizarDisponibilidades(rutaDisponibilidades, disponibilidad);
+                        ExcelDisponibilidadWriter.actualizarDisponibilidades(rutaDisponibilidades, arbitros); // Pasar la lista de árbitros
                         System.out.println("Saliendo del sistema. ¡Hasta luego!");
                     }
                     default -> System.out.println("Opción no válida. Intente de nuevo.");
@@ -129,7 +151,7 @@ public class Main {
         }
     }
 
-    private static void modificarDisponibilidad(List<Arbitro> arbitros, Disponibilidad disponibilidad) {
+    private static void modificarDisponibilidad(List<Arbitro> arbitros, String rutaArchivo) {
         Scanner scanner = new Scanner(System.in);
 
         while (true) {
@@ -146,41 +168,86 @@ public class Main {
                 continue;
             }
 
-            System.out.println("Modificando disponibilidad para el árbitro: " + arbitro.getNombre());
+            modificarDisponibilidad(arbitro);
 
-            while (true) {
-                System.out.print("Ingrese el día que desea modificar (Jueves, Viernes, Sábado, Domingo): ");
-                String dia = scanner.nextLine();
-
-                System.out.print("Ingrese el nuevo horario de inicio (HH:mm): ");
-                String horaInicioStr = scanner.nextLine();
-                System.out.print("Ingrese el nuevo horario de fin (HH:mm): ");
-                String horaFinStr = scanner.nextLine();
-
-                try {
-                    LocalTime horaInicio = LocalTime.parse(horaInicioStr);
-                    LocalTime horaFin = LocalTime.parse(horaFinStr);
-
-                    disponibilidad.eliminarDisponibilidad(dia, horaInicio, horaFin); // Eliminar la disponibilidad anterior
-                    disponibilidad.agregarDisponibilidad(dia, horaInicio, horaFin); // Agregar la nueva disponibilidad
-
-                    System.out.println("Disponibilidad modificada correctamente.");
-                } catch (Exception e) {
-                    System.out.println("Error al modificar la disponibilidad: " + e.getMessage());
-                }
-
-                System.out.print("¿Desea modificar otro día para este árbitro? (Sí/No): ");
-                String respuesta = scanner.nextLine();
-                if (!respuesta.equalsIgnoreCase("Sí")) {
-                    break;
-                }
-            }
-
-            System.out.print("¿Desea modificar otro árbitro? (Sí/No): ");
+            System.out.print("¿Desea modificar otro árbitro? (y/n): ");
             String respuesta = scanner.nextLine();
-            if (!respuesta.equalsIgnoreCase("Sí")) {
+            if (!respuesta.equalsIgnoreCase("y")) {
                 break;
             }
+        }
+    }
+
+    private static void modificarDisponibilidad(Arbitro arbitro) {
+        Scanner scanner = new Scanner(System.in);
+        String rutaArchivo = "src/main/resources/data/disponibilidades"; // Ruta fija del archivo Excel
+
+        System.out.println("Modificando disponibilidad para el árbitro: " + arbitro.getNombre());
+
+        while (true) {
+            System.out.println("\nSeleccione el día que desea modificar:");
+            System.out.println("1. Jueves");
+            System.out.println("2. Viernes");
+            System.out.println("3. Sábado");
+            System.out.println("4. Domingo");
+            System.out.print("Seleccione una opción: ");
+            int diaOpcion = scanner.nextInt();
+            scanner.nextLine(); // Limpiar buffer
+
+            String dia;
+            switch (diaOpcion) {
+                case 1 -> dia = "Jueves";
+                case 2 -> dia = "Viernes";
+                case 3 -> dia = "Sábado";
+                case 4 -> dia = "Domingo";
+                default -> {
+                    System.out.println("Opción no válida. Intente de nuevo.");
+                    continue;
+                }
+            }
+
+            System.out.print("Ingrese el nuevo horario de inicio (HH:mm): ");
+            String horaInicioStr = scanner.nextLine();
+            System.out.print("Ingrese el nuevo horario de fin (HH:mm): ");
+            String horaFinStr = scanner.nextLine();
+
+            try {
+                LocalTime horaInicio = LocalTime.parse(horaInicioStr);
+                LocalTime horaFin = LocalTime.parse(horaFinStr);
+
+                // Modificar la disponibilidad en el objeto Arbitro
+                Disponibilidad disponibilidad = arbitro.getDisponibilidades().stream()
+                        .filter(d -> d.getDisponibilidadSemanal().containsKey(dia))
+                        .findFirst()
+                        .orElse(null);
+
+                if (disponibilidad == null) {
+                    disponibilidad = new Disponibilidad(arbitro.getCedula());
+                    arbitro.agregarDisponibilidad(disponibilidad);
+                }
+
+                disponibilidad.eliminarDisponibilidad(dia, horaInicio, horaFin); // Eliminar la disponibilidad anterior
+                disponibilidad.agregarDisponibilidad(dia, horaInicio, horaFin); // Agregar la nueva disponibilidad
+
+                System.out.println("Disponibilidad modificada correctamente.");
+            } catch (Exception e) {
+                System.out.println("Error al modificar la disponibilidad: " + e.getMessage());
+            }
+
+            System.out.print("¿Desea modificar otro día para este árbitro? (y/n): ");
+            String respuesta = scanner.nextLine();
+            if (!respuesta.equalsIgnoreCase("y")) {
+                break;
+            }
+        }
+
+        System.out.print("¿Desea guardar los cambios en el archivo Excel? (y/n): ");
+        String confirmacion = scanner.nextLine();
+        if (confirmacion.equalsIgnoreCase("y")) {
+            ExcelDisponibilidadWriter.actualizarDisponibilidadArbitro(rutaArchivo, arbitro);
+            System.out.println("Cambios guardados en el archivo Excel.");
+        } else {
+            System.out.println("Los cambios no se guardaron en el archivo Excel.");
         }
     }
 
