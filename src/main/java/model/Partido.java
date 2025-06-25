@@ -52,6 +52,18 @@ public class Partido {
         return escenario;
     }
 
+    public void setFecha(LocalDate fecha) {
+        this.fecha = fecha;
+    }
+
+    public void setHora(LocalTime hora) {
+        this.hora = hora;
+    }
+
+    public void setEscenario(String escenario) {
+        this.escenario = escenario;
+    }
+
     @Override
     public String toString() {
         return "Partido: " + equipoLocal + " vs " + equipoVisitante +

@@ -10,8 +10,10 @@ import java.util.Scanner;
 
 import model.Arbitro;
 import model.Disponibilidad;
+import model.Partido;
 import utils.ExcelArbitroReader;
 import utils.ExcelDisponibilidadWriter;
+import utils.ExcelPartidoReader;
 
 public class Main {
     private static final boolean TESTING_MODE = true; // Cambiar a 'false' para desactivar el modo de prueba
@@ -21,6 +23,7 @@ public class Main {
 
         // Crear objetos desde los archivos Excel
         List<Arbitro> arbitros = cargarArbitros();
+        List<Partido> partidos = ExcelPartidoReader.leerPartidos("src/main/resources/data/Partidos.xlsx");
         String rutaDisponibilidades = calcularRutaDisponibilidades();
         File archivoDisponibilidades = new File(rutaDisponibilidades);
         if (!archivoDisponibilidades.exists()) {
@@ -60,9 +63,8 @@ public class Main {
                 System.out.println("1. Visualización de árbitros disponibles");
                 System.out.println("2. Asignación de árbitros a partidos o eventos (por implementar)");
                 System.out.println("3. Generación de informes semanales (por implementar)");
-                System.out.println("4. Modificación extemporánea de asignaciones (por implementar)");
-                System.out.println("5. Modificar disponibilidad");
-                System.out.println("6. Extras");
+                System.out.println("4. Modificación extemporánea de asignaciones");
+                System.out.println("5. Extras");
                 System.out.println("0. Salir");
                 System.out.print("Seleccione una opción: ");
                 opcion = scanner.nextInt();
@@ -72,21 +74,8 @@ public class Main {
                     case 1 -> mostrarArbitrosDisponibles(arbitros);
                     case 2 -> System.out.println("Funcionalidad de asignación de árbitros (por implementar)");
                     case 3 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
-                    case 4 -> System.out.println("Funcionalidad de modificación extemporánea de asignaciones (por implementar)");
-                    case 5 -> {
-                        System.out.print("\nIngrese la cédula del árbitro que desea modificar: ");
-                        String cedula = scanner.nextLine();
-                        Arbitro arbitro = arbitros.stream()
-                                .filter(a -> a.getCedula().equals(cedula))
-                                .findFirst()
-                                .orElse(null);
-                        if (arbitro == null) {
-                            System.out.println("No se encontró un árbitro con la cédula proporcionada.");
-                        } else {
-                            modificarDisponibilidad(arbitro);
-                        }
-                    }
-                    case 6 -> mostrarExtras(arbitros);
+                    case 4 -> menuModificacionExtemporanea(arbitros, partidos);
+                    case 5 -> mostrarExtras(arbitros, partidos);
                     case 0 -> {
                         System.out.println("Guardando cambios en las disponibilidades...");
                         String ruta = calcularRutaDisponibilidades();
@@ -257,17 +246,32 @@ public class Main {
         }
     }
 
-    private static void mostrarExtras(List<Arbitro> arbitros) {
+    private static void mostrarExtras(List<Arbitro> arbitros, List<Partido> partidos) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("\n===== Extras =====");
         System.out.println("1. Mostrar información de un árbitro");
+        System.out.println("2. Ver partidos cargados");
         System.out.print("Seleccione una opción: ");
         int opcion = scanner.nextInt();
         scanner.nextLine(); // Limpiar buffer
         if (opcion == 1) {
             mostrarArbitro(arbitros);
+        } else if (opcion == 2) {
+            mostrarPartidos(partidos);
         } else {
             System.out.println("Opción no válida.");
+        }
+    }
+
+    private static void mostrarPartidos(List<Partido> partidos) {
+        System.out.println("\n===== Partidos cargados =====");
+        if (partidos.isEmpty()) {
+            System.out.println("No hay partidos cargados.");
+            return;
+        }
+        for (Partido partido : partidos) {
+            System.out.println(partido);
+            System.out.println("----------------------");
         }
     }
 
@@ -305,5 +309,74 @@ public class Main {
         if (!tieneDisponibilidad) {
             System.out.println("No tiene disponibilidad.");
         }
+    }
+
+    private static void menuModificacionExtemporanea(List<Arbitro> arbitros, List<Partido> partidos) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\n===== Modificación Extemporánea =====");
+        System.out.println("1. Modificar disponibilidad de árbitro");
+        System.out.println("2. Modificar o eliminar partido");
+        System.out.print("Seleccione una opción: ");
+        int opcion = scanner.nextInt();
+        scanner.nextLine(); // Limpiar buffer
+        switch (opcion) {
+            case 1 -> {
+                System.out.print("\nIngrese la cédula del árbitro que desea modificar: ");
+                String cedula = scanner.nextLine();
+                Arbitro arbitro = arbitros.stream()
+                        .filter(a -> a.getCedula().equals(cedula))
+                        .findFirst()
+                        .orElse(null);
+                if (arbitro == null) {
+                    System.out.println("No se encontró un árbitro con la cédula proporcionada.");
+                } else {
+                    modificarDisponibilidad(arbitro);
+                }
+            }
+            case 2 -> modificarPartido(partidos);
+            default -> System.out.println("Opción no válida.");
+        }
+    }
+
+    private static void modificarPartido(List<Partido> partidos) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\n===== Modificar o Eliminar Partido =====");
+        for (int i = 0; i < partidos.size(); i++) {
+            System.out.println((i + 1) + ". " + partidos.get(i));
+        }
+        System.out.print("Seleccione el número del partido a modificar/eliminar (0 para cancelar): ");
+        int idx = scanner.nextInt() - 1;
+        scanner.nextLine();
+        if (idx < 0 || idx >= partidos.size()) {
+            System.out.println("Operación cancelada.");
+            return;
+        }
+        Partido partido = partidos.get(idx);
+        System.out.println("1. Modificar información del partido");
+        System.out.println("2. Eliminar partido");
+        System.out.print("Seleccione una opción: ");
+        int op = scanner.nextInt();
+        scanner.nextLine();
+        if (op == 1) {
+            System.out.print("Nueva fecha (yyyy-MM-dd, enter para mantener): ");
+            String nuevaFecha = scanner.nextLine();
+            if (!nuevaFecha.isBlank()) partido.setFecha(LocalDate.parse(nuevaFecha));
+            System.out.print("Nueva hora (HH:mm, enter para mantener): ");
+            String nuevaHora = scanner.nextLine();
+            if (!nuevaHora.isBlank()) partido.setHora(LocalTime.parse(nuevaHora));
+            System.out.print("Nuevo escenario (enter para mantener): ");
+            String nuevoEscenario = scanner.nextLine();
+            if (!nuevoEscenario.isBlank()) partido.setEscenario(nuevoEscenario);
+            System.out.println("Partido modificado.");
+        } else if (op == 2) {
+            partidos.remove(idx);
+            System.out.println("Partido eliminado.");
+        } else {
+            System.out.println("Opción no válida.");
+            return;
+        }
+        // Guardar cambios en el archivo Excel
+        utils.ExcelPartidoWriter.escribirPartidos("src/main/resources/data/Partidos.xlsx", partidos);
+        System.out.println("Cambios guardados en el archivo Excel.");
     }
 }
