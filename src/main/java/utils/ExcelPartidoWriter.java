@@ -25,6 +25,7 @@ public class ExcelPartidoWriter {
             header.createCell(5).setCellValue("hora");
             header.createCell(6).setCellValue("escenario");
             header.createCell(7).setCellValue("colegio_arbitros");
+            header.createCell(8).setCellValue("id");
 
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -40,6 +41,7 @@ public class ExcelPartidoWriter {
                 row.createCell(5).setCellValue(p.getHora().format(timeFormatter));
                 row.createCell(6).setCellValue(p.getEscenario());
                 row.createCell(7).setCellValue(""); // Puedes agregar el campo si lo tienes en Partido
+                row.createCell(8).setCellValue(p.getId());
             }
 
             try (FileOutputStream fos = new FileOutputStream(rutaArchivo)) {

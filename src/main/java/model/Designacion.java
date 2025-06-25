@@ -4,11 +4,17 @@ public class Designacion {
     private Arbitro arbitro;
     private Partido partido;
     private String rol; // "Central" o "Asistente"
+    private boolean realizado;
 
     public Designacion(Arbitro arbitro, Partido partido, String rol) {
+        this(arbitro, partido, rol, true); // Cambiado a true por defecto
+    }
+
+    public Designacion(Arbitro arbitro, Partido partido, String rol, boolean realizado) {
         this.arbitro = arbitro;
         this.partido = partido;
         this.rol = rol;
+        this.realizado = realizado;
     }
 
     public Arbitro getArbitro() {
@@ -27,8 +33,16 @@ public class Designacion {
         this.rol = rol;
     }
 
+    public boolean isRealizado() {
+        return realizado;
+    }
+
+    public void setRealizado(boolean realizado) {
+        this.realizado = realizado;
+    }
+
     @Override
     public String toString() {
-        return "Arbitro: " + arbitro.getNombre() + " (" + rol + ")\n" + partido.toString();
+        return "Arbitro: " + arbitro.getNombre() + " (" + rol + ")\n" + partido.toString() + "\nRealizado: " + (realizado ? "Sí" : "No");
     }
 }

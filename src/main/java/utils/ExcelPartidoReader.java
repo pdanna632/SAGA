@@ -36,7 +36,8 @@ public class ExcelPartidoReader {
                 LocalTime hora = getCellHora(row, 5);
                 String escenario = getCellString(row, 6);
                 String colegioArbitros = getCellString(row, 7); // No usado aún
-                Partido partido = new Partido(categoria, municipio, equipoLocal, equipoVisitante, fecha, hora, escenario);
+                String id = getCellString(row, 8);
+                Partido partido = new Partido(categoria, municipio, equipoLocal, equipoVisitante, fecha, hora, escenario, id.isEmpty() ? java.util.UUID.randomUUID().toString() : id);
                 partidos.add(partido);
             }
         } catch (IOException e) {

@@ -17,6 +17,7 @@ import utils.ExcelPartidoReader;
 
 public class Main {
     private static final boolean TESTING_MODE = true; // Cambiar a 'false' para desactivar el modo de prueba
+    public static List<model.Designacion> designacionesEnMemoria;
 
     public static void main(String[] args) {
         System.out.println("===== Bienvenido a SAGA - Sistema Automatizado de Gestión Arbitral =====");
@@ -39,6 +40,17 @@ public class Main {
                 arbitro.agregarDisponibilidad(disp);
             }
         }
+
+        // Crear archivo de designaciones semanal si no existe
+        String rutaDesignaciones = utils.ExcelDesignacionWriterReader.calcularRutaDesignaciones();
+        File archivoDesignaciones = new File(rutaDesignaciones);
+        if (!archivoDesignaciones.exists()) {
+            utils.ExcelDesignacionWriterReader.guardarDesignaciones(new java.util.ArrayList<>());
+            System.out.println("Archivo de designaciones creado: " + rutaDesignaciones);
+        }
+
+        // Cargar designaciones en memoria al iniciar
+        designacionesEnMemoria = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
 
         if (!TESTING_MODE) {
             try (Scanner scanner = new Scanner(System.in)) {
@@ -73,13 +85,15 @@ public class Main {
                 switch (opcion) {
                     case 1 -> mostrarArbitrosDisponibles(arbitros, partidos);
                     case 2 -> menuAsignacionArbitros(arbitros, partidos);
-                    case 3 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
+                    case 3 -> generarInformeSemanal(partidos, arbitros);
                     case 4 -> menuModificacionExtemporanea(arbitros, partidos);
                     case 5 -> mostrarExtras(arbitros, partidos);
                     case 0 -> {
                         System.out.println("Guardando cambios en las disponibilidades...");
                         String ruta = calcularRutaDisponibilidades();
                         utils.ExcelDisponibilidadWriter.actualizarDisponibilidades(ruta, arbitros);
+                        System.out.println("Guardando cambios en los partidos...");
+                        utils.ExcelPartidoWriter.escribirPartidos("src/main/resources/data/Partidos.xlsx", partidos);
                         System.out.println("¡Hasta luego!");
                     }
                     default -> System.out.println("Opción no válida. Intente de nuevo.");
@@ -354,6 +368,7 @@ public class Main {
         System.out.println("\n===== Modificación Extemporánea =====");
         System.out.println("1. Modificar disponibilidad de árbitro");
         System.out.println("2. Modificar o eliminar partido");
+        System.out.println("3. Marcar evento como NO realizado");
         System.out.print("Seleccione una opción: ");
         int opcion = scanner.nextInt();
         scanner.nextLine(); // Limpiar buffer
@@ -372,8 +387,36 @@ public class Main {
                 }
             }
             case 2 -> modificarPartido(partidos);
+            case 3 -> marcarEventoNoRealizado(partidos, arbitros);
             default -> System.out.println("Opción no válida.");
         }
+    }
+
+    private static void marcarEventoNoRealizado(List<Partido> partidos, List<Arbitro> arbitros) {
+        List<model.Designacion> designaciones = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
+        if (designaciones.isEmpty()) {
+            System.out.println("No hay designaciones para la semana actual.");
+            return;
+        }
+        System.out.println("\n===== Designaciones de la semana actual =====");
+        for (int i = 0; i < designaciones.size(); i++) {
+            model.Designacion d = designaciones.get(i);
+            System.out.printf("%d. %s | %s | %s | %s | Realizado: %s\n", i + 1,
+                d.getPartido().getEquipoLocal() + " vs " + d.getPartido().getEquipoVisitante(),
+                d.getPartido().getFecha(),
+                d.getPartido().getHora(),
+                d.getArbitro().getNombre() + " (" + d.getRol() + ")",
+                d.isRealizado() ? "Sí" : "No");
+        }
+        System.out.print("Seleccione el número de la designación a marcar como NO realizada (0 para cancelar): ");
+        int idx = new Scanner(System.in).nextInt() - 1;
+        if (idx < 0 || idx >= designaciones.size()) {
+            System.out.println("Operación cancelada.");
+            return;
+        }
+        designaciones.get(idx).setRealizado(false);
+        utils.ExcelDesignacionWriterReader.guardarDesignaciones(designaciones);
+        System.out.println("Designación actualizada como NO realizada.");
     }
 
     private static void modificarPartido(List<Partido> partidos) {
@@ -452,6 +495,10 @@ public class Main {
             System.out.print("Rol a asignar (Central/Asistente): ");
             String rol = scanner.nextLine();
             model.Designacion designacion = new model.Designacion(arbitro, partido, rol);
+            // Guardar inmediatamente la designación en el Excel semanal
+            List<model.Designacion> designaciones = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
+            designaciones.add(designacion);
+            utils.ExcelDesignacionWriterReader.guardarDesignaciones(designaciones);
             System.out.println("Designación creada: " + designacion);
             // Aquí puedes guardar la designación en una lista o archivo
         } else if (opcion == 2) {
@@ -494,6 +541,10 @@ public class Main {
             System.out.print("Rol a asignar (Central/Asistente): ");
             String rol = scanner.nextLine();
             model.Designacion designacion = new model.Designacion(arbitro, partido, rol);
+            // Guardar inmediatamente la designación en el Excel semanal
+            List<model.Designacion> designaciones = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
+            designaciones.add(designacion);
+            utils.ExcelDesignacionWriterReader.guardarDesignaciones(designaciones);
             System.out.println("Designación creada: " + designacion);
             // Aquí puedes guardar la designación en una lista o archivo
         } else {
@@ -513,5 +564,24 @@ public class Main {
             }
         }
         return false;
+    }
+
+    private static void generarInformeSemanal(List<Partido> partidos, List<Arbitro> arbitros) {
+        List<model.Designacion> designaciones = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
+        System.out.println("\n===== INFORME SEMANAL DE EVENTOS REALIZADOS =====");
+        System.out.printf("%-25s %-25s %-10s %-10s %-10s %-20s %-20s\n", "Partido", "Escenario", "Fecha", "Hora", "Rol", "Árbitro", "Realizado");
+        for (model.Designacion d : designaciones) {
+            if (d.isRealizado()) {
+                Partido p = d.getPartido();
+                System.out.printf("%-25s %-25s %-10s %-10s %-10s %-20s %-20s\n",
+                    p.getEquipoLocal() + " vs " + p.getEquipoVisitante(),
+                    p.getEscenario(),
+                    p.getFecha(),
+                    p.getHora(),
+                    d.getRol(),
+                    d.getArbitro().getNombre(),
+                    d.isRealizado() ? "Sí" : "No");
+            }
+        }
     }
 }
