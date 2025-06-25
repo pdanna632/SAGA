@@ -55,3 +55,29 @@ MIT License
 
 Este proyecto sigue una estructura modular en Java. Cada carpeta contiene lógica separada para entidades como usuarios, árbitros y reportes. Las funcionalidades deben manejar archivos Excel como fuente de datos. El objetivo es una futura migración fluida a una interfaz gráfica hecha en React.
 
+## Instrucciones para ejecutar el proyecto
+
+### Requisitos previos
+- Java 17 o superior instalado
+- Maven instalado
+
+### Pasos para ejecutar
+1. Clona este repositorio:
+   ```bash
+   git clone https://github.com/pdanna632/SAGA.git
+   ```
+2. Ingresa a la carpeta del proyecto:
+   ```bash
+   cd SAGA
+   ```
+3. Compila el proyecto con Maven:
+   ```bash
+   mvn clean install
+   ```
+4. Ejecuta la aplicación principal:
+   ```bash
+   mvn exec:java
+   ```
+
+Esto ejecutará la aplicación de consola. Si tienes algún problema con la ejecución, asegúrate de que las variables de entorno de Java y Maven estén correctamente configuradas.
+
