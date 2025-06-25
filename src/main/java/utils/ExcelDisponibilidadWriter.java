@@ -29,6 +29,8 @@ import model.Disponibilidad;
 public class ExcelDisponibilidadWriter {
 
     public static void generarArchivoDisponibilidades(List<Arbitro> arbitros, String rutaBase) {
+        // Filtrar solo árbitros activos
+        List<Arbitro> arbitrosActivos = arbitros.stream().filter(Arbitro::isActivo).toList();
         LocalDate hoy = LocalDate.now();
         LocalDate primerDiaSemana = hoy.with(DayOfWeek.MONDAY);
         LocalDate ultimoDiaSemana = hoy.with(DayOfWeek.SUNDAY);
@@ -57,8 +59,8 @@ public class ExcelDisponibilidadWriter {
             // Crear encabezados
             crearEncabezados(sheet, estiloTituloDia);
 
-            // Agregar información de árbitros
-            agregarArbitros(sheet, arbitros, estiloNoDisponible);
+            // Agregar información de árbitros activos
+            agregarArbitros(sheet, arbitrosActivos, estiloNoDisponible);
 
             // Ajustar columnas
             for (int i = 0; i < 27; i++) { // Ajustar para incluir todas las columnas
@@ -150,6 +152,8 @@ public class ExcelDisponibilidadWriter {
     }
 
     public static void actualizarDisponibilidades(String rutaArchivo, List<Arbitro> arbitros) {
+        // Filtrar solo árbitros activos
+        List<Arbitro> arbitrosActivos = arbitros.stream().filter(Arbitro::isActivo).toList();
         File archivo = new File(rutaArchivo);
 
         try (Workbook workbook = archivo.exists() ? new XSSFWorkbook(new FileInputStream(archivo)) : new XSSFWorkbook()) {
@@ -159,8 +163,8 @@ public class ExcelDisponibilidadWriter {
                 crearEncabezados(sheet, workbook);
             }
 
-            // Iterar sobre todos los árbitros
-            for (Arbitro arbitro : arbitros) {
+            // Iterar sobre todos los árbitros activos
+            for (Arbitro arbitro : arbitrosActivos) {
                 String cedulaArbitro = arbitro.getCedula();
                 List<Disponibilidad> disponibilidades = arbitro.getDisponibilidades(); // Obtener la lista de disponibilidades del árbitro
 

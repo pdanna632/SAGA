@@ -71,8 +71,8 @@ public class Main {
                 scanner.nextLine(); // Limpiar buffer
 
                 switch (opcion) {
-                    case 1 -> mostrarArbitrosDisponibles(arbitros);
-                    case 2 -> System.out.println("Funcionalidad de asignación de árbitros (por implementar)");
+                    case 1 -> mostrarArbitrosDisponibles(arbitros, partidos);
+                    case 2 -> menuAsignacionArbitros(arbitros, partidos);
                     case 3 -> System.out.println("Funcionalidad de generación de informes semanales (por implementar)");
                     case 4 -> menuModificacionExtemporanea(arbitros, partidos);
                     case 5 -> mostrarExtras(arbitros, partidos);
@@ -114,18 +114,51 @@ public class Main {
         return arbitros;
     }
 
-    private static void mostrarArbitrosDisponibles(List<Arbitro> arbitros) {
+    private static void mostrarArbitrosDisponibles(List<Arbitro> arbitros, List<Partido> partidos) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("\n===== Consulta de árbitros disponibles =====");
-        System.out.print("Ingrese el día (Jueves, Viernes, Sábado, Domingo): ");
-        String dia = scanner.nextLine().trim();
-        System.out.print("Ingrese la hora de inicio (formato HH:mm, ej: 12:00): ");
-        String horaStr = scanner.nextLine().trim();
-        LocalTime hora;
-        try {
-            hora = LocalTime.parse(horaStr.length() == 4 ? "0" + horaStr : horaStr);
-        } catch (Exception e) {
-            System.out.println("Hora inválida. Debe ser en formato HH:mm");
+        System.out.println("1. Buscar por día y hora");
+        System.out.println("2. Buscar por partido");
+        System.out.print("Seleccione una opción: ");
+        int opcion = scanner.nextInt();
+        scanner.nextLine();
+        String dia = null;
+        LocalTime hora = null;
+        if (opcion == 1) {
+            System.out.print("Ingrese el día (Jueves, Viernes, Sábado, Domingo): ");
+            dia = scanner.nextLine().trim();
+            System.out.print("Ingrese la hora de inicio (formato HH:mm, ej: 12:00): ");
+            String horaStr = scanner.nextLine().trim();
+            try {
+                hora = LocalTime.parse(horaStr.length() == 4 ? "0" + horaStr : horaStr);
+            } catch (Exception e) {
+                System.out.println("Hora inválida. Debe ser en formato HH:mm");
+                return;
+            }
+        } else if (opcion == 2) {
+            if (partidos.isEmpty()) {
+                System.out.println("No hay partidos cargados.");
+                return;
+            }
+            for (int i = 0; i < partidos.size(); i++) {
+                System.out.println((i + 1) + ". " + partidos.get(i));
+            }
+            System.out.print("Seleccione el número del partido: ");
+            int idx = scanner.nextInt() - 1;
+            scanner.nextLine();
+            if (idx < 0 || idx >= partidos.size()) {
+                System.out.println("Selección inválida.");
+                return;
+            }
+            Partido partido = partidos.get(idx);
+            // Traducir día de la semana de inglés a español
+            String[] diasES = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+            String diaSemana = diasES[partido.getFecha().getDayOfWeek().getValue() - 1];
+            dia = diaSemana;
+            hora = partido.getHora();
+            System.out.println("Buscando árbitros disponibles para el partido: " + partido);
+        } else {
+            System.out.println("Opción no válida.");
             return;
         }
         boolean alguno = false;
@@ -144,6 +177,11 @@ public class Main {
         if (!alguno) {
             System.out.println("No hay árbitros disponibles en ese día y hora.");
         }
+    }
+
+    // Filtrar árbitros activos para asignaciones y otras funciones
+    private static List<Arbitro> getArbitrosActivos(List<Arbitro> arbitros) {
+        return arbitros.stream().filter(Arbitro::isActivo).toList();
     }
 
     private static void modificarDisponibilidad(List<Arbitro> arbitros, String rutaArchivo) {
@@ -378,5 +416,102 @@ public class Main {
         // Guardar cambios en el archivo Excel
         utils.ExcelPartidoWriter.escribirPartidos("src/main/resources/data/Partidos.xlsx", partidos);
         System.out.println("Cambios guardados en el archivo Excel.");
+    }
+
+    private static void menuAsignacionArbitros(List<Arbitro> arbitros, List<Partido> partidos) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\n===== Asignación de árbitros a partidos =====");
+        System.out.println("1. Asignar manualmente (por cédula y partido)");
+        System.out.println("2. Asignar seleccionando partido y árbitro disponible");
+        System.out.print("Seleccione una opción: ");
+        int opcion = scanner.nextInt();
+        scanner.nextLine();
+        if (opcion == 1) {
+            System.out.print("Ingrese la cédula del árbitro: ");
+            String cedula = scanner.nextLine();
+            Arbitro arbitro = arbitros.stream().filter(a -> a.getCedula().equals(cedula) && a.isActivo()).findFirst().orElse(null);
+            if (arbitro == null) {
+                System.out.println("No se encontró un árbitro activo con esa cédula.");
+                return;
+            }
+            for (int i = 0; i < partidos.size(); i++) {
+                System.out.println((i + 1) + ". " + partidos.get(i));
+            }
+            System.out.print("Seleccione el número del partido: ");
+            int idx = scanner.nextInt() - 1;
+            scanner.nextLine();
+            if (idx < 0 || idx >= partidos.size()) {
+                System.out.println("Selección inválida.");
+                return;
+            }
+            Partido partido = partidos.get(idx);
+            if (!arbitroDisponibleParaPartido(arbitro, partido)) {
+                System.out.println("El árbitro no está disponible en la fecha y hora del partido.");
+                return;
+            }
+            System.out.print("Rol a asignar (Central/Asistente): ");
+            String rol = scanner.nextLine();
+            model.Designacion designacion = new model.Designacion(arbitro, partido, rol);
+            System.out.println("Designación creada: " + designacion);
+            // Aquí puedes guardar la designación en una lista o archivo
+        } else if (opcion == 2) {
+            if (partidos.isEmpty()) {
+                System.out.println("No hay partidos cargados.");
+                return;
+            }
+            for (int i = 0; i < partidos.size(); i++) {
+                System.out.println((i + 1) + ". " + partidos.get(i));
+            }
+            System.out.print("Seleccione el número del partido: ");
+            int idx = scanner.nextInt() - 1;
+            scanner.nextLine();
+            if (idx < 0 || idx >= partidos.size()) {
+                System.out.println("Selección inválida.");
+                return;
+            }
+            Partido partido = partidos.get(idx);
+            // Traducir día de la semana de inglés a español
+            String[] diasES = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+            String diaSemana = diasES[partido.getFecha().getDayOfWeek().getValue() - 1];
+            LocalTime hora = partido.getHora();
+            // Mostrar árbitros disponibles
+            List<Arbitro> disponibles = arbitros.stream().filter(a -> a.isActivo() && arbitroDisponibleParaPartido(a, partido)).toList();
+            if (disponibles.isEmpty()) {
+                System.out.println("No hay árbitros disponibles para este partido.");
+                return;
+            }
+            for (int i = 0; i < disponibles.size(); i++) {
+                System.out.println((i + 1) + ". " + disponibles.get(i));
+            }
+            System.out.print("Seleccione el número del árbitro a asignar: ");
+            int idxArb = scanner.nextInt() - 1;
+            scanner.nextLine();
+            if (idxArb < 0 || idxArb >= disponibles.size()) {
+                System.out.println("Selección inválida.");
+                return;
+            }
+            Arbitro arbitro = disponibles.get(idxArb);
+            System.out.print("Rol a asignar (Central/Asistente): ");
+            String rol = scanner.nextLine();
+            model.Designacion designacion = new model.Designacion(arbitro, partido, rol);
+            System.out.println("Designación creada: " + designacion);
+            // Aquí puedes guardar la designación en una lista o archivo
+        } else {
+            System.out.println("Opción no válida.");
+        }
+    }
+
+    private static boolean arbitroDisponibleParaPartido(Arbitro arbitro, Partido partido) {
+        String[] diasES = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"};
+        String dia = diasES[partido.getFecha().getDayOfWeek().getValue() - 1];
+        LocalTime hora = partido.getHora();
+        for (Disponibilidad disp : arbitro.getDisponibilidades()) {
+            for (Disponibilidad.FranjaHoraria franja : disp.consultarDisponibilidad(dia)) {
+                if (!hora.isBefore(franja.getInicio()) && hora.isBefore(franja.getFin())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
