@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalTime; 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import model.Arbitro;
@@ -16,7 +17,7 @@ import utils.ExcelDisponibilidadWriter;
 import utils.ExcelPartidoReader;
 
 public class Main {
-    private static final boolean TESTING_MODE = true; // Cambiar a 'false' para desactivar el modo de prueba
+    private static final boolean TESTING_MODE = false; // Cambiar a 'false' para desactivar el modo de prueba
     public static List<model.Designacion> designacionesEnMemoria;
 
     public static void main(String[] args) {
@@ -52,8 +53,8 @@ public class Main {
         // Cargar designaciones en memoria al iniciar
         designacionesEnMemoria = utils.ExcelDesignacionWriterReader.leerDesignaciones(partidos, arbitros);
 
-        if (!TESTING_MODE) {
-            try (Scanner scanner = new Scanner(System.in)) {
+        try (Scanner scanner = new Scanner(System.in)) {
+            if (!TESTING_MODE) {
                 System.out.print("Ingrese el usuario: ");
                 String usuario = scanner.nextLine();
                 System.out.print("Ingrese la contraseña: ");
@@ -63,13 +64,11 @@ public class Main {
                     System.out.println("Credenciales incorrectas. Acceso denegado.");
                     return;
                 }
+            } else {
+                System.out.println("Modo de prueba activado. Saltando validación de credenciales...");
             }
-        } else {
-            System.out.println("Modo de prueba activado. Saltando validación de credenciales...");
-        }
 
-        int opcion;
-        try (Scanner scanner = new Scanner(System.in)) {
+            int opcion;
             do {
                 System.out.println("\n===== SAGA - Sistema Automatizado de Gestión Arbitral =====");
                 System.out.println("1. Visualización de árbitros disponibles");
@@ -79,8 +78,13 @@ public class Main {
                 System.out.println("5. Extras");
                 System.out.println("0. Salir");
                 System.out.print("Seleccione una opción: ");
-                opcion = scanner.nextInt();
-                scanner.nextLine(); // Limpiar buffer
+                try {
+                    opcion = scanner.nextInt();
+                    scanner.nextLine(); // Limpiar buffer
+                } catch (NoSuchElementException | IllegalStateException e) {
+                    System.out.println("No se pudo leer la opción del menú. ¿Está ejecutando el programa en un entorno sin entrada estándar? Saliendo...");
+                    break;
+                }
 
                 switch (opcion) {
                     case 1 -> mostrarArbitrosDisponibles(arbitros, partidos);
