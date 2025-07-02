@@ -1,6 +1,1 @@
-model\Partido.class
-model\Disponibilidad.class
-utils\ExcelArbitroReader.class
-main\Main.class
-model\Arbitro.class
-utils\ExcelArbitroReader$1.class
+com\saga\utils\ExcelArbitroReader$1.class
