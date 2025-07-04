@@ -15,7 +15,7 @@ public class LoginController {
         Map<String, Object> respuesta = new HashMap<>();
 
         // Validación básica (esto luego se conectará con tu lógica real)
-        if ("admin".equals(request.getUsuario()) && "1234".equals(request.getContrasena())) {
+        if ("ARBIANTIOQUIA".equals(request.getUsuario()) && "ADMIN".equals(request.getContrasena())) {
             respuesta.put("estado", "exito");
             respuesta.put("mensaje", "Inicio de sesión exitoso");
         } else {
