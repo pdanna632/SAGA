@@ -7,8 +7,8 @@ export const login = async (usuario, contrasena) => {
       contrasena,
     });
 
-    if (response.data.autenticado) {
-      // Aquí podrías guardar un token o estado
+    if (response.data.estado === "exito") {
+      // Puedes guardar token o estado aquí
       localStorage.setItem("logueado", "true");
       return true;
     }
