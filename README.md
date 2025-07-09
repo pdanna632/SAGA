@@ -7,39 +7,76 @@
 - Samuel Gutiérrez Betancur  
 - Santiago Barrientos Medina
 
-## 📋 Descripción
-Sistema integral de gestión arbitral que combina:
-- 🖥️ **Menú Java tradicional** - Sistema completo de administración
-- 📱 **Bot de WhatsApp** - Registro automático de árbitros
-- 🌐 **Servidor web** - Para futuras integraciones
-- 📊 **Gestión de datos** - Excel como base de datos
-
 ---
 
-## ⚡ INSTALACIÓN Y USO - SÚPER SIMPLE
+## 🎯 **CÓMO EJECUTAR EL PROYECTO - 3 OPCIONES**
 
-### 🎯 **Solo 2 comandos necesarios:**
+### 📋 **Descripción del Sistema**
+Sistema integral de gestión arbitral que incluye:
+- 🖥️ **Sistema Java tradicional** - Menú de consola completo
+- 🤖 **Bot de WhatsApp Business** - Consultas de árbitros via WhatsApp
+- 🌐 **Servidor web** - Interfaz moderna (en desarrollo)
+
+### ⚡ **OPCIÓN 1: SISTEMA COMPLETO AUTOMÁTICO**
 
 #### 1️⃣ **Primera vez** (instalar dependencias)
 ```powershell
 .\instalar-dependencias.ps1
 ```
 
-#### 2️⃣ **Siempre** (ejecutar sistema)
+#### 2️⃣ **Siempre** (ejecutar todo el sistema)
 ```powershell
 .\iniciar-saga.ps1
 ```
 
-**¡Eso es todo!** El sistema iniciará automáticamente:
-- 🖥️ Menú Java tradicional (sistema principal)
-- 🤖 Bot de WhatsApp (nueva ventana)
+**Resultado:** Se ejecuta automáticamente:
+- 🖥️ Menú Java tradicional (consola)
+- 🤖 Bot de WhatsApp (si está configurado)
 - 🌐 Servidor web (puerto 8080)
 
 ---
 
-## 🎮 Cómo Usar Después de Iniciar
+### 🖥️ **OPCIÓN 2: SOLO SISTEMA JAVA (Menú Original)**
 
-### �️ **Menú Java (Consola Principal)**
+```bash
+# Compilar y ejecutar sistema Java
+mvn clean compile
+mvn exec:java
+```
+
+**Resultado:** Solo el menú de consola Java
+- **Usuario:** `ARBIANTIOQUIA`
+- **Contraseña:** `ADMIN`
+
+---
+
+### 📱 **OPCIÓN 3: SOLO BOT WHATSAPP**
+
+```powershell
+# Ejecutar solo el bot de WhatsApp
+.\ejecutar-whatsapp-bot.ps1
+```
+
+**Resultado:** Solo el bot de WhatsApp Business
+- Servidor en `http://localhost:8080`
+- Webhook: `/webhook/whatsapp`
+- Health check: `/webhook/health`
+
+---
+
+## 🎮 **¿QUÉ OPCIÓN ELEGIR?**
+
+| Opción | Cuándo usarla |
+|--------|---------------|
+| **Opción 1** | Uso completo del sistema (recomendado) |
+| **Opción 2** | Solo necesitas gestión de árbitros/partidos |
+| **Opción 3** | Solo necesitas bot de WhatsApp o desarrollo |
+
+---
+
+## 🎮 Funcionalidades por Opción
+
+### 🖥️ **Sistema Java (Menú de Consola)**
 - **Usuario:** `ARBIANTIOQUIA`
 - **Contraseña:** `ADMIN`
 - **Funciones:** 
@@ -48,42 +85,50 @@ Sistema integral de gestión arbitral que combina:
   - Generación de informes semanales
   - Modificación de disponibilidades
 
-### 🤖 **Bot WhatsApp (Nueva Ventana)**
-- Escanea el código QR con WhatsApp
-- Envía mensaje **"SAGA"** para probar
-- Los árbitros se registran automáticamente
-- Actualización de números telefónicos
-- Conversación natural y amigable
+### 🤖 **Bot WhatsApp Business**
+- Consultas de información personal de árbitros
+- Comandos: `hola`, `ayuda`, `mi info`, `partidos`
+- Búsqueda automática por número de teléfono
+- Respuestas inteligentes y personalizadas
 
 ### 🌐 **Servidor Web**
-- Corre en puerto 8080
-- Para integraciones avanzadas
+- Puerto 8080
+- Endpoints REST para integraciones
 - Interfaz web moderna (en desarrollo)
 
 ---
 
 ## 🔧 Solución de Problemas
 
-### ❌ **Error Node.js**
+### ❌ **Error al ejecutar - Java**
+```bash
+# Verifica Java 17+ instalado
+java -version
+mvn --version
+
+# Si falla, instala Java 17+
+# Descarga desde: https://adoptium.net/
+```
+
+### ❌ **Error al ejecutar - Bot WhatsApp**
 ```powershell
-# Instala Node.js desde: https://nodejs.org
+# Verifica Node.js instalado
+node --version
+
+# Si falla, instala Node.js
+# Descarga desde: https://nodejs.org
 .\instalar-dependencias.ps1
 ```
 
-### ❌ **Error Java**
-```powershell
-# Verifica Java 17+ instalado
-mvn --version
-```
-
-### ❌ **Error Puerto**
+### ❌ **Error Puerto 8080**
 - Cierra otras aplicaciones en puerto 8080
+- Cambia puerto en `application.properties`
 - Reinicia el sistema
 
-### ❌ **Error WhatsApp**
-- Verifica conexión a internet
-- Escanea nuevamente el código QR
-- Asegúrate de que WhatsApp esté actualizado
+### ❌ **Error WhatsApp Business API**
+- Verifica credenciales en `application.properties`
+- Revisa configuración del webhook en Meta
+- Asegúrate de tener acceso a WhatsApp Business API
 
 ---
 
@@ -115,13 +160,16 @@ mvn --version
 
 ```
 SAGA/
-├── 📋 README.md                    # Este archivo (guía completa)
-├── 🚀 iniciar-saga.ps1            # EJECUTABLE PRINCIPAL
-├── 📦 instalar-dependencias.ps1   # Instalador de dependencias
-├── ⚙️ pom.xml                      # Configuración Maven
-├── 📂 src/                         # Código fuente Java
-├── 📂 Pagina web SAGA/            # Aplicación web React
-└── 📂 target/                      # Archivos compilados
+├── 📋 README.md                           # Esta guía completa
+├── � README-WhatsApp-Bot.md             # Documentación específica del bot
+├── �🚀 iniciar-saga.ps1                   # EJECUTABLE SISTEMA COMPLETO
+├── 🤖 ejecutar-whatsapp-bot.ps1          # EJECUTABLE SOLO BOT WHATSAPP  
+├── 📦 instalar-dependencias.ps1          # Instalador de dependencias
+├── ⚙️ pom.xml                             # Configuración Maven
+├── 📂 src/main/java/com/saga/             # Código fuente Java original
+├── 📂 src/main/java/com/saga/whatsapp/    # Código fuente Bot WhatsApp
+├── 📂 Pagina web SAGA/                   # Aplicación web React
+└── 📂 target/                            # Archivos compilados
 ```
 
 ---
@@ -151,26 +199,39 @@ SAGA/
 ## 🌟 Estado del Proyecto
 
 ### ✅ **COMPLETADO**
-- Sistema de menú Java funcional
-- Integración con WhatsApp Bot
-- Gestión completa de árbitros y partidos
-- Interfaz web básica
-- Documentación unificada
+- ✅ Sistema de menú Java funcional
+- ✅ Bot de WhatsApp Business integrado
+- ✅ Gestión completa de árbitros y partidos
+- ✅ Procesamiento de comandos inteligente
+- ✅ Integración con API de WhatsApp Business
+- ✅ Scripts de automatización
+- ✅ Documentación completa
 
 ### 🚧 **EN DESARROLLO**
-- Expansión de funcionalidades web
-- Integración con API oficial de Meta WhatsApp
 - Dashboard web completo
-- Notificaciones automáticas mejoradas
+- Gestión de partidos via WhatsApp
+- Notificaciones automáticas
+- Gestión de disponibilidades via bot
 
 ---
 
-## 📞 Soporte
+## 📞 Soporte y Documentación
 
-Para problemas o dudas:
-1. Revisa la sección "Solución de Problemas"
+### 📋 **Documentación Adicional**
+- `README-WhatsApp-Bot.md` - Guía completa del bot de WhatsApp
+- `src/main/resources/application.properties` - Configuración del sistema
+
+### 🆘 **Para problemas o dudas:**
+1. Revisa la sección "Solución de Problemas" arriba
 2. Verifica que todos los requisitos estén instalados
-3. Contacta al equipo de desarrollo
+3. Consulta la documentación específica del componente
+4. Contacta al equipo de desarrollo
+
+### 🔗 **Enlaces útiles:**
+- [Java 17 Download](https://adoptium.net/)
+- [Node.js Download](https://nodejs.org/)
+- [WhatsApp Business API](https://developers.facebook.com/docs/whatsapp/)
+- [Maven Installation](https://maven.apache.org/install.html)
 
 ---
 
@@ -222,6 +283,11 @@ Este proyecto sigue una estructura modular en Java. Cada carpeta contiene lógic
 - Maven instalado
 
 ### Pasos para ejecutar
+
+#### ⚠️ **NOTA IMPORTANTE**: Usa las opciones de arriba para ejecutar el proyecto.
+
+**Las siguientes instrucciones son solo para casos específicos:**
+
 1. Clona este repositorio:
    ```bash
    git clone https://github.com/pdanna632/SAGA.git
@@ -230,14 +296,15 @@ Este proyecto sigue una estructura modular en Java. Cada carpeta contiene lógic
    ```bash
    cd SAGA
    ```
-3. Compila el proyecto con Maven:
+3. Para **SOLO sistema Java** (sin bot WhatsApp):
    ```bash
-   mvn clean install
-   ```
-4. Ejecuta la aplicación principal:
-   ```bash
+   mvn clean compile
    mvn exec:java
    ```
+4. Para **SOLO bot WhatsApp**:
+   ```bash
+   mvn spring-boot:run
+   ```
 
-Esto ejecutará la aplicación de consola. Si tienes algún problema con la ejecución, asegúrate de que las variables de entorno de Java y Maven estén correctamente configuradas.
+**🎯 RECOMENDADO**: Usa `.\iniciar-saga.ps1` para ejecutar el sistema completo automáticamente.
 
