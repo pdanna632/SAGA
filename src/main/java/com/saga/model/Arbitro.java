@@ -1,6 +1,5 @@
 package com.saga.model;
 
-import com.saga.model.Disponibilidad;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,5 +52,10 @@ public class Arbitro {
 
     public boolean isActivo() {
         return activo;
+    }
+
+    // Setters para actualización
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
     }
 }

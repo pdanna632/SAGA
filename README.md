@@ -1,5 +1,5 @@
 # SAGA - Sistema Automatizado de Gestión Arbitral
-https://github.com/pdanna632/SAGA.git
+
 **Desarrollado por:**
 - Danna Valeria Pérez Niño  
 - Juan Pablo Jiménez Vergara  
@@ -7,19 +7,35 @@ https://github.com/pdanna632/SAGA.git
 - Samuel Gutiérrez Betancur  
 - Santiago Barrientos Medina
 
-## ¿Qué es SAGA?
+## 📋 Descripción
+Sistema de gestión arbitral simplificado:
+- 🖥️ **Menú Java tradicional** - Sistema completo en una aplicación
+- 📱 **Arquitectura limpia** - Preparado para futuras integraciones
+- 📊 **Gestión de datos** - Excel como base de datos
 
-SAGA (Sistema Automatizado de Gestión Arbitral) es una herramienta pensada para asistir y optimizar las labores administrativas relacionadas con la organización de árbitros. En su primera etapa, está enfocada en automatizar tareas para Arbiantioquia, una escuela de árbitros regional.
+## ⚡ INSTALACIÓN Y EJECUCIÓN SIMPLE
 
-## Objetivo
+### 1️⃣ Instalar Dependencias (Solo una vez)
+```powershell
+.\instalar-dependencias.ps1
+```
 
-Automatizar la gestión arbitral haciendo uso de archivos de Excel como base de datos principal, ofreciendo funcionalidades clave que agilicen procesos manuales y reduzcan errores humanos.
+### 2️⃣ Ejecutar Sistema Completo
+```powershell
+.\iniciar-saga.ps1
+```
 
-## Tecnologías
+**¡Eso es todo!** El sistema iniciará automáticamente:
+- 🖥️ Menú Java tradicional (sistema completo)
 
-- Backend (lógica y funcionalidades): Java  
-- Frontend (interfaz web - futura implementación): React.js  
-- Datos: Archivos `.xlsx` como base de datos simulada
+### 🔧 Archivos de Sistema:
+- `iniciar-saga.ps1` - Script principal de inicio
+- `instalar-dependencias.ps1` - Instalación de dependencias
+
+### 📊 Tecnologías:
+- Backend: Java 17 + Maven
+- Datos: Archivos `.xlsx` como base de datos
+- Arquitectura: Limpia y extensible
 
 ## Funcionalidades Principales
 
@@ -31,9 +47,26 @@ Automatizar la gestión arbitral haciendo uso de archivos de Excel como base de 
 
 ## Estado actual del proyecto
 
-- En desarrollo de la lógica principal en consola (Java)  
-- Conexión inicial a documentos de Excel simulando una base de datos  
-- Diseño de arquitectura para el paso futuro a interfaz web con React
+✅ **SISTEMA LIMPIO Y FUNCIONAL** - Versión 1.0
+
+- ✅ Lógica principal en consola (Java) - **TERMINADA**
+- ✅ Conexión a documentos Excel como base de datos - **TERMINADA**
+- ✅ Scripts de automatización para Windows - **TERMINADAS**
+- ✅ Arquitectura limpia y simplificada - **TERMINADA**
+- ✅ Proyecto sin dependencias innecesarias - **TERMINADA**
+
+### 🎯 Funcionalidades Implementadas:
+- Sistema de autenticación (`ARBIANTIOQUIA`/`ADMIN`)
+- Gestión completa de árbitros mediante Excel
+- Asignación automática de árbitros a partidos
+- Generación de informes y estadísticas
+- Modificación de disponibilidades
+- Interfaz de menú intuitiva
+
+### 🔮 Próximos Pasos:
+- Futuras integraciones según necesidades del proyecto
+- Posibles expansiones web o móviles
+- Mejoras en la interfaz de usuario
 
 
 ## Próximos pasos
