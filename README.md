@@ -1,4 +1,4 @@
-# SAGA - Sistema Automatizado de Gestión Arbitral
+# 🚀 SAGA - Sistema Automatizado de Gestión Arbitral
 
 **Desarrollado por:**
 - Danna Valeria Pérez Niño  
@@ -8,46 +8,173 @@
 - Santiago Barrientos Medina
 
 ## 📋 Descripción
-Sistema de gestión arbitral simplificado:
-- 🖥️ **Menú Java tradicional** - Sistema completo en una aplicación
-- 📱 **Arquitectura limpia** - Preparado para futuras integraciones
+Sistema integral de gestión arbitral que combina:
+- 🖥️ **Menú Java tradicional** - Sistema completo de administración
+- 📱 **Bot de WhatsApp** - Registro automático de árbitros
+- 🌐 **Servidor web** - Para futuras integraciones
 - 📊 **Gestión de datos** - Excel como base de datos
 
-## ⚡ INSTALACIÓN Y EJECUCIÓN SIMPLE
+---
 
-### 1️⃣ Instalar Dependencias (Solo una vez)
+## ⚡ INSTALACIÓN Y USO - SÚPER SIMPLE
+
+### 🎯 **Solo 2 comandos necesarios:**
+
+#### 1️⃣ **Primera vez** (instalar dependencias)
 ```powershell
 .\instalar-dependencias.ps1
 ```
 
-### 2️⃣ Ejecutar Sistema Completo
+#### 2️⃣ **Siempre** (ejecutar sistema)
 ```powershell
 .\iniciar-saga.ps1
 ```
 
 **¡Eso es todo!** El sistema iniciará automáticamente:
-- 🖥️ Menú Java tradicional (sistema completo)
+- 🖥️ Menú Java tradicional (sistema principal)
+- 🤖 Bot de WhatsApp (nueva ventana)
+- 🌐 Servidor web (puerto 8080)
 
-### 🔧 Archivos de Sistema:
-- `iniciar-saga.ps1` - Script principal de inicio
-- `instalar-dependencias.ps1` - Instalación de dependencias
+---
 
-### 📊 Tecnologías:
-- Backend: Java 17 + Maven
-- Datos: Archivos `.xlsx` como base de datos
-- Arquitectura: Limpia y extensible
+## 🎮 Cómo Usar Después de Iniciar
 
-## Funcionalidades Principales
+### �️ **Menú Java (Consola Principal)**
+- **Usuario:** `ARBIANTIOQUIA`
+- **Contraseña:** `ADMIN`
+- **Funciones:** 
+  - Gestión completa de árbitros y partidos
+  - Asignación de árbitros
+  - Generación de informes semanales
+  - Modificación de disponibilidades
 
-- Verificación de identidad del usuario  
-- Visualización de árbitros disponibles  
-- Asignación de árbitros a partidos o eventos  
-- Generación de informes semanales  
-- Modificación extemporánea de asignaciones
+### 🤖 **Bot WhatsApp (Nueva Ventana)**
+- Escanea el código QR con WhatsApp
+- Envía mensaje **"SAGA"** para probar
+- Los árbitros se registran automáticamente
+- Actualización de números telefónicos
+- Conversación natural y amigable
 
-## Estado actual del proyecto
+### 🌐 **Servidor Web**
+- Corre en puerto 8080
+- Para integraciones avanzadas
+- Interfaz web moderna (en desarrollo)
 
-✅ **SISTEMA LIMPIO Y FUNCIONAL** - Versión 1.0
+---
+
+## 🔧 Solución de Problemas
+
+### ❌ **Error Node.js**
+```powershell
+# Instala Node.js desde: https://nodejs.org
+.\instalar-dependencias.ps1
+```
+
+### ❌ **Error Java**
+```powershell
+# Verifica Java 17+ instalado
+mvn --version
+```
+
+### ❌ **Error Puerto**
+- Cierra otras aplicaciones en puerto 8080
+- Reinicia el sistema
+
+### ❌ **Error WhatsApp**
+- Verifica conexión a internet
+- Escanea nuevamente el código QR
+- Asegúrate de que WhatsApp esté actualizado
+
+---
+
+## 📊 Tecnologías y Arquitectura
+
+### **Backend**
+- Java 17 + Maven
+- Arquitectura limpia y extensible
+- Manejo de Excel con Apache POI
+
+### **WhatsApp Integration**
+- Baileys (JavaScript/Node.js)
+- QR Code authentication
+- Normalización automática de números
+
+### **Web**
+- React + Vite
+- Interfaz moderna y responsiva
+- Puerto 8080
+
+### **Base de Datos**
+- Archivos `.xlsx` como base de datos
+- Fácil mantenimiento y backup
+- Compatible con Excel
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+SAGA/
+├── 📋 README.md                    # Este archivo (guía completa)
+├── 🚀 iniciar-saga.ps1            # EJECUTABLE PRINCIPAL
+├── 📦 instalar-dependencias.ps1   # Instalador de dependencias
+├── ⚙️ pom.xml                      # Configuración Maven
+├── 📂 src/                         # Código fuente Java
+├── 📂 Pagina web SAGA/            # Aplicación web React
+└── 📂 target/                      # Archivos compilados
+```
+
+---
+
+## 🎯 Funcionalidades Principales
+
+### **Gestión de Árbitros**
+- ✅ Verificación de identidad del usuario  
+- ✅ Visualización de árbitros disponibles  
+- ✅ Registro automático via WhatsApp
+- ✅ Actualización de información de contacto
+
+### **Gestión de Partidos**
+- ✅ Asignación de árbitros a partidos
+- ✅ Verificación de disponibilidad
+- ✅ Modificación extemporánea de asignaciones
+- ✅ Gestión de conflictos de horario
+
+### **Reportes y Comunicación**
+- ✅ Generación de informes semanales  
+- ✅ Notificaciones automáticas via WhatsApp
+- ✅ Exportación de datos
+- ✅ Historial de asignaciones
+
+---
+
+## 🌟 Estado del Proyecto
+
+### ✅ **COMPLETADO**
+- Sistema de menú Java funcional
+- Integración con WhatsApp Bot
+- Gestión completa de árbitros y partidos
+- Interfaz web básica
+- Documentación unificada
+
+### 🚧 **EN DESARROLLO**
+- Expansión de funcionalidades web
+- Integración con API oficial de Meta WhatsApp
+- Dashboard web completo
+- Notificaciones automáticas mejoradas
+
+---
+
+## 📞 Soporte
+
+Para problemas o dudas:
+1. Revisa la sección "Solución de Problemas"
+2. Verifica que todos los requisitos estén instalados
+3. Contacta al equipo de desarrollo
+
+---
+
+**¡Sistema SAGA - Gestión Arbitral Simplificada!** 🏆
 
 - ✅ Lógica principal en consola (Java) - **TERMINADA**
 - ✅ Conexión a documentos Excel como base de datos - **TERMINADA**
