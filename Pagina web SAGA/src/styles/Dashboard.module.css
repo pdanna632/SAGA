@@ -1,0 +1,33 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #121212;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 3rem; /* espacio para que el contenido no choque con el navbar */
+}
+
+.box {
+  background-color: #1e1e1e;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.box h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.box p {
+  font-size: 1.2rem;
+}
