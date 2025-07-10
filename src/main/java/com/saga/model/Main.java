@@ -326,6 +326,7 @@ public class Main {
         System.out.println("\n========================= EXTRAS =========================");
         System.out.println(" 1. Mostrar información de un árbitro");
         System.out.println(" 2. Ver partidos cargados");
+        System.out.println(" 3. Iniciar bot de WhatsApp");
         System.out.println("---------------------------------------------------------");
         System.out.print("Seleccione una opción: ");
         int opcion = scanner.nextInt();
@@ -333,6 +334,7 @@ public class Main {
         switch (opcion) {
             case 1 -> mostrarArbitro(arbitros, scanner);
             case 2 -> mostrarPartidos(partidos);
+            case 3 -> iniciarBotWhatsApp();
             default -> System.out.println("[!] Opción no válida.");
         }
         System.out.println("========================================================\n");
@@ -634,5 +636,70 @@ public class Main {
             }
         }
         System.out.println("===============================================================================\n");
+    }
+
+    /**
+     * Método para iniciar el bot de WhatsApp en una nueva ventana de CMD
+     */
+    private static void iniciarBotWhatsApp() {
+        try {
+            System.out.println("\n🤖 Iniciando bot de WhatsApp SAGA...");
+            
+            // Ruta al directorio del bot
+            String rutaBot = "whatsapp-bot";
+            String rutaCompleta = System.getProperty("user.dir") + File.separator + rutaBot;
+            
+            // Verificar que el directorio existe
+            File directorioBot = new File(rutaCompleta);
+            if (!directorioBot.exists()) {
+                System.out.println("❌ Error: No se encontró el directorio del bot en: " + rutaCompleta);
+                System.out.println("   Asegúrate de que la carpeta 'whatsapp-bot' esté en el directorio raíz del proyecto.");
+                return;
+            }
+            
+            // Verificar que package.json existe
+            File packageJson = new File(rutaCompleta + File.separator + "package.json");
+            if (!packageJson.exists()) {
+                System.out.println("❌ Error: No se encontró package.json en el directorio del bot.");
+                System.out.println("   Ejecuta primero la instalación del bot.");
+                return;
+            }
+            
+            // Verificar que el script de inicio existe
+            File scriptInicio = new File(rutaCompleta + File.separator + "iniciar-bot.bat");
+            if (!scriptInicio.exists()) {
+                System.out.println("❌ Error: No se encontró el script iniciar-bot.bat en el directorio del bot.");
+                System.out.println("   Asegúrate de que todos los archivos del bot estén presentes.");
+                return;
+            }
+            
+            // Comando para abrir nueva ventana de CMD y ejecutar el bot
+            String[] comandos = {
+                "cmd.exe", 
+                "/c", 
+                "start", 
+                "SAGA WhatsApp Bot", 
+                "cmd.exe", 
+                "/k", 
+                "cd /d \"" + rutaCompleta + "\" && iniciar-bot.bat"
+            };
+            
+            // Ejecutar el comando
+            ProcessBuilder processBuilder = new ProcessBuilder(comandos);
+            processBuilder.start();
+            
+            System.out.println("✅ Bot de WhatsApp iniciado en una nueva ventana de CMD.");
+            System.out.println("📱 Sigue las instrucciones en la nueva ventana para conectar el bot.");
+            System.out.println("🔄 El bot funcionará independientemente de esta aplicación.");
+            System.out.println("💡 Para detener el bot, presiona Ctrl+C en la ventana del bot.");
+            
+        } catch (java.io.IOException e) {
+            System.out.println("❌ Error al iniciar el bot de WhatsApp: " + e.getMessage());
+            System.out.println("   Verifica que Node.js esté instalado y que el bot esté configurado correctamente.");
+            System.out.println("   También puedes ejecutar manualmente el bot desde la carpeta whatsapp-bot con: npm start");
+        } catch (SecurityException e) {
+            System.out.println("❌ Error de seguridad al intentar ejecutar el bot: " + e.getMessage());
+            System.out.println("   Ejecuta manualmente el bot desde la carpeta whatsapp-bot con: npm start");
+        }
     }
 }
