@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Partidos from "./pages/Partidos";
+import Arbitros from "./pages/Arbitros";
 
 function App() {
   return (
@@ -12,7 +13,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/partidos" element={<Partidos />} />
-
+        <Route path="/arbitros" element={<Arbitros />} />
       </Routes>
     </BrowserRouter>
   );

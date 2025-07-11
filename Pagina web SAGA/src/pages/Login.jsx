@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../services/authService";
 import styles from "../styles/Login.module.css";
 
 function Login() {
@@ -10,12 +9,12 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const exito = await login(usuario, contrasena);
-    if (exito) {
-      navigate("/dashboard");
-    } else {
-      alert("Credenciales inválidas");
-    }
+    if (usuario === "ARBIANTIOQUIA" && contrasena === "ADMIN") {
+    navigate("/dashboard");
+}   else {
+    alert("Credenciales inválidas");
+}
+
   };
 
   return (

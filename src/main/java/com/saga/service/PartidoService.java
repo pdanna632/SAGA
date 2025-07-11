@@ -17,15 +17,13 @@ public class PartidoService {
     public List<Partido> obtenerPartidosDesdeExcel() {
         List<Partido> partidos = new ArrayList<>();
 
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream("Partidos.xlsx");
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("data/Partidos.xlsx");
              Workbook workbook = new XSSFWorkbook(is)) {
 
             Sheet hoja = workbook.getSheetAt(0);
 
-            // Saltar la fila de encabezados (índice 0)
             for (int i = 1; i <= hoja.getLastRowNum(); i++) {
                 Row fila = hoja.getRow(i);
-
                 if (fila == null) continue;
 
                 String categoria = fila.getCell(0).getStringCellValue();
@@ -33,17 +31,40 @@ public class PartidoService {
                 String equipoLocal = fila.getCell(2).getStringCellValue();
                 String equipoVisitante = fila.getCell(3).getStringCellValue();
 
-                LocalDate fecha = fila.getCell(4).getLocalDateTimeCellValue().toLocalDate();
-                LocalTime hora = fila.getCell(5).getLocalDateTimeCellValue().toLocalTime();
+                Cell fechaCell = fila.getCell(4);
+                LocalDate fecha;
 
-                String escenario = fila.getCell(6).getStringCellValue();
+                if (fechaCell.getCellType() == CellType.NUMERIC) {
+                    fecha = fechaCell.getLocalDateTimeCellValue().toLocalDate();
+                } else {
+                    fecha = LocalDate.parse(fechaCell.getStringCellValue());
+                }
 
-                Partido partido = new Partido(categoria, municipio, equipoLocal, equipoVisitante, fecha, hora, escenario);
+                Cell horaCell = fila.getCell(5);
+                LocalTime hora;
+
+                if (horaCell.getCellType() == CellType.NUMERIC) {
+                    hora = horaCell.getLocalDateTimeCellValue().toLocalTime();
+                } else {
+                    hora = LocalTime.parse(horaCell.getStringCellValue());
+                }
+
+
+                String id = fila.getCell(8).getStringCellValue(); // 🆔
+
+                Partido partido = new Partido(
+                    categoria, municipio, equipoLocal, equipoVisitante,
+                    fecha, hora, id
+                );
+
                 partidos.add(partido);
             }
 
+            System.out.println("✅ Excel leído correctamente. Total partidos: " + partidos.size());
+
         } catch (Exception e) {
-            e.printStackTrace(); // Podrías lanzar una excepción personalizada
+            System.err.println("❌ Error leyendo el Excel:");
+            e.printStackTrace();
         }
 
         return partidos;
