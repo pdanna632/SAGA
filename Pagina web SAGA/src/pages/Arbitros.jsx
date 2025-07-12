@@ -8,7 +8,7 @@ function Partidos() {
 
       <main className={styles.main}>
         <div className={styles.box}>
-          <h2>Partidos disponibles</h2>
+          <h2>Arbitros disponibles</h2>
         </div>
       </main>
     </div>
