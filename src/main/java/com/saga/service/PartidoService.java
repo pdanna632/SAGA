@@ -1,15 +1,20 @@
 package com.saga.service;
 
-import com.saga.model.Partido;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.stereotype.Service;
-
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+
+import com.saga.model.Partido;
 
 @Service
 public class PartidoService {
@@ -68,5 +73,9 @@ public class PartidoService {
         }
 
         return partidos;
+    }
+
+    public List<Partido> obtenerTodosLosPartidos() {
+        return obtenerPartidosDesdeExcel();
     }
 }

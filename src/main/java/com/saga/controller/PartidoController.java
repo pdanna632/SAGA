@@ -1,24 +1,26 @@
 package com.saga.controller;
 
-import com.saga.model.Partido;
-import com.saga.service.PartidoService;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.saga.model.Partido;
+import com.saga.service.PartidoService;
+
 @RestController
-@RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/api/partidos")
+@CrossOrigin(origins = "*")
 public class PartidoController {
-
-    private final PartidoService partidoService;
-
-    public PartidoController(PartidoService partidoService) {
-        this.partidoService = partidoService;
-    }
-
-    @GetMapping("/partidos")
-    public List<Partido> obtenerPartidos() {
-        return partidoService.obtenerPartidosDesdeExcel();
+    
+    @Autowired
+    private PartidoService partidoService;
+    
+    @GetMapping
+    public List<Partido> obtenerTodosLosPartidos() {
+        return partidoService.obtenerTodosLosPartidos();
     }
 }
