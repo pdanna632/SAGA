@@ -43,23 +43,46 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
             Long chatId = update.getMessage().getChatId();
             String firstName = update.getMessage().getFrom().getFirstName();
             String username = update.getMessage().getFrom().getUserName();
+            String phoneNumber = null;
+            
+            // Intentar obtener número de teléfono si está disponible
+            if (update.getMessage().getContact() != null) {
+                phoneNumber = update.getMessage().getContact().getPhoneNumber();
+            }
             
             logger.info("📨 Mensaje recibido de " + firstName + " (ID: " + chatId + "): " + messageText);
             
             try {
-                String response = messageProcessor.processMessage(messageText, chatId, firstName, username);
+                String response = messageProcessor.processMessage(messageText, chatId, firstName, username, phoneNumber);
                 sendMessage(chatId, response);
             } catch (Exception e) {
                 logger.severe("❌ Error procesando mensaje: " + e.getMessage());
                 sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu mensaje. Intenta de nuevo.");
             }
+        } else if (update.hasMessage() && update.getMessage().hasContact()) {
+            // Manejar cuando el usuario comparte su contacto
+            Long chatId = update.getMessage().getChatId();
+            String firstName = update.getMessage().getFrom().getFirstName();
+            String username = update.getMessage().getFrom().getUserName();
+            String phoneNumber = update.getMessage().getContact().getPhoneNumber();
+            
+            logger.info("📱 Contacto recibido de " + firstName + " (ID: " + chatId + "): " + phoneNumber);
+            
+            try {
+                String response = messageProcessor.processContact(phoneNumber, chatId, firstName);
+                sendMessage(chatId, response);
+            } catch (Exception e) {
+                logger.severe("❌ Error procesando contacto: " + e.getMessage());
+                sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu contacto. Intenta de nuevo.");
+            }
         }
     }
     
-    private void sendMessage(Long chatId, String text) {
+    public void sendMessage(Long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
+        message.setParseMode("Markdown");
         
         try {
             execute(message);
@@ -67,5 +90,56 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             logger.severe("❌ Error enviando mensaje: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Envía mensaje con botón para solicitar contacto
+     */
+    private void sendMessageWithContactButton(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        message.setParseMode("Markdown");
+        
+        // Crear botón para solicitar contacto
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton contactButton = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton("📱 Compartir mi contacto");
+        contactButton.setRequestContact(true);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton cedulaButton = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton("🆔 Escribir mi cédula");
+        
+        // Crear teclado
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup keyboard = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow row1 = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow();
+        row1.add(contactButton);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow row2 = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow();
+        row2.add(cedulaButton);
+        
+        keyboard.setKeyboard(java.util.Arrays.asList(row1, row2));
+        keyboard.setResizeKeyboard(true);
+        keyboard.setOneTimeKeyboard(true);
+        keyboard.setInputFieldPlaceholder("Elige una opción para verificarte...");
+        
+        message.setReplyMarkup(keyboard);
+        
+        try {
+            execute(message);
+            logger.info("✅ Mensaje con botones enviado a " + chatId);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error enviando mensaje con botones: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Método público para enviar mensajes con botón de contacto
+     */
+    public void sendMessageWithContactRequest(Long chatId, String text) {
+        sendMessageWithContactButton(chatId, text);
     }
 }

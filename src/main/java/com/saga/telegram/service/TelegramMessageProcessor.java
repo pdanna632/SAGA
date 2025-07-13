@@ -2,126 +2,249 @@ package com.saga.telegram.service;
 
 import java.util.logging.Logger;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.saga.model.Arbitro;
-import com.saga.utils.ExcelArbitroWriter;
+import com.saga.telegram.service.TelegramAuthService.AuthResult;
 
 @Service
 public class TelegramMessageProcessor {
     
     private static final Logger logger = Logger.getLogger(TelegramMessageProcessor.class.getName());
     
+    @Autowired
+    private TelegramAuthService authService;
+    
     /**
      * Procesa un mensaje de texto recibido
      */
-    public String processMessage(String messageText, Long chatId, String userName, String userHandle) {
+    public String processMessage(String messageText, Long chatId, String userName, String userHandle, String phoneNumber) {
         if (messageText == null || messageText.trim().isEmpty()) {
             return "🤔 No entendí tu mensaje. Escribe /ayuda para ver los comandos disponibles.";
         }
         
+        String chatIdStr = chatId.toString();
         String text = messageText.toLowerCase().trim();
         
-        // Comandos básicos
+        // Verificar si el usuario está esperando ingresar cédula
+        if (authService.isEsperandoCedula(chatIdStr)) {
+            return procesarVerificacionCedula(chatIdStr, messageText.trim());
+        }
+        
+        // Comandos de saludo - aquí aplicamos la nueva lógica de autenticación
         if (text.equals("/start") || text.equals("hola") || text.equals("hi") || text.equals("buenas")) {
-            return generateWelcomeMessage(userName, chatId);
+            return procesarSaludo(chatIdStr, userName, phoneNumber);
         }
         
-        if (text.equals("/ayuda") || text.equals("ayuda") || text.equals("help")) {
-            return generateHelpMessage();
+        // Verificar si el usuario está autenticado para otros comandos
+        if (!authService.isUsuarioAutenticado(chatIdStr)) {
+            return """
+                   🔒 *No autenticado*
+                   
+                   Para usar el bot, primero debes autenticarte.
+                   
+                   Escribe *hola* para comenzar el proceso de autenticación.
+                   """;
         }
         
-        if (text.equals("/info") || text.contains("mi info") || text.contains("mis datos")) {
-            return generateUserInfo(chatId, userName);
+        // Usuario autenticado - procesar comandos
+        Arbitro arbitro = authService.getArbitroAutenticado(chatIdStr);
+        
+        if (text.equals("/info") || text.contains("informacion") || text.contains("información") || text.contains("datos")) {
+            return generateUserInfo(arbitro);
+        }
+        
+        if (text.equals("/ayuda") || text.equals("/help") || text.contains("ayuda") || text.contains("help")) {
+            return generateHelpMessage(arbitro);
         }
         
         if (text.contains("partidos") || text.contains("partido")) {
-            return "⚽ *Mis Partidos*\n\nFuncionalidad en desarrollo.\n" +
-                   "Pronto podrás consultar tus partidos asignados aquí.";
+            return generatePartidosMessage(arbitro);
         }
         
         if (text.contains("disponibilidad") || text.contains("disponible")) {
-            return "📅 *Disponibilidad*\n\nFuncionalidad en desarrollo.\n" +
-                   "Pronto podrás gestionar tu disponibilidad aquí.";
+            return generateDisponibilidadMessage(arbitro);
         }
         
         if (text.contains("contacto") || text.contains("contactos")) {
-            return "📞 *Contactos*\n\nFuncionalidad en desarrollo.\n" +
-                   "Pronto podrás consultar contactos de otros árbitros.";
+            return generateContactosMessage();
         }
         
-        // Respuesta por defecto
-        return "🤔 No entendí tu consulta.\n\n" +
-               "Escribe /ayuda para ver los comandos disponibles o " +
-               "usa el menú de botones para navegar.";
+        if (text.equals("/logout") || text.equals("salir")) {
+            authService.cerrarSesion(chatIdStr);
+            return """
+                   👋 *Sesión Cerrada*
+                   
+                   Has cerrado sesión exitosamente.
+                   
+                   Para volver a usar el bot, escribe *hola* para autenticarte nuevamente.
+                   """;
+        }
+        
+        // Comando no reconocido
+        return String.format("""
+               🤔 No entendí el comando "*%s*"
+               
+               Escribe `/ayuda` para ver los comandos disponibles.
+               
+               💡 *También puedes escribir de forma natural:*
+               • "¿Cuáles son mis partidos?"
+               • "Ver mi información"
+               • "Contactos de árbitros"
+               """, messageText);
     }
     
     /**
-     * Procesa callbacks de botones inline
+     * Procesa el contacto compartido por el usuario
      */
-    public String processCallbackQuery(String callbackData, Long chatId, String userName) {
-        switch (callbackData) {
-            case "mi_info":
-                return generateUserInfo(chatId, userName);
-            case "mis_partidos":
-                return "⚽ *Mis Próximos Partidos*\n\n" +
-                       "Funcionalidad en desarrollo.\n" +
-                       "Aquí podrás ver:\n" +
-                       "• Partidos asignados\n" +
-                       "• Fechas y horarios\n" +
-                       "• Equipos participantes\n" +
-                       "• Ubicación de canchas";
-            case "disponibilidad":
-                return "📅 *Gestión de Disponibilidad*\n\n" +
-                       "Funcionalidad en desarrollo.\n" +
-                       "Aquí podrás:\n" +
-                       "• Marcar tu disponibilidad\n" +
-                       "• Ver calendario de fechas\n" +
-                       "• Actualizar horarios libres";
-            case "contactos":
-                return "📞 *Directorio de Contactos*\n\n" +
-                       "Funcionalidad en desarrollo.\n" +
-                       "Aquí podrás:\n" +
-                       "• Buscar otros árbitros\n" +
-                       "• Ver información de contacto\n" +
-                       "• Acceder a directorio completo";
-            case "ayuda":
-                return generateHelpMessage();
+    public String processContact(String phoneNumber, Long chatId, String firstName) {
+        String chatIdStr = chatId.toString();
+        logger.info("Procesando contacto compartido para chat ID: " + chatIdStr);
+        
+        AuthResult result = authService.autenticarPorTelefono(chatIdStr, phoneNumber);
+        
+        switch (result.getStatus()) {
+            case AUTENTICADO:
+                return generateWelcomeMessageAuthenticated(result.getArbitro());
+                
+            case NUMERO_NO_ENCONTRADO:
+                // Iniciar proceso de verificación por cédula como backup
+                authService.iniciarVerificacionPorCedula(chatIdStr);
+                return String.format("""
+                       📱 *Número no encontrado*
+                       
+                       Tu número %s no está registrado en nuestro sistema.
+                       
+                       🔐 **Como alternativa, puedes autenticarte con tu cédula:**
+                       
+                       ✏️ Por favor, ingresa tu *número de cédula*:
+                       """, phoneNumber);
+                
+            case ERROR:
+                return "❌ Error al validar el número de teléfono. Intenta de nuevo.";
+                
             default:
-                return "🤔 Opción no reconocida.";
+                return "❌ Error de autenticación. Contacta al administrador.";
         }
     }
     
     /**
-     * Genera mensaje de bienvenida
+     * Procesa el saludo inicial y maneja la autenticación
      */
-    private String generateWelcomeMessage(String userName, Long chatId) {
-        // Intentar buscar árbitro por chat ID o username
-        // Por ahora solo mensaje genérico
-        return String.format(
-            "🏆 *¡Hola %s!*\n\n" +
-            "Bienvenido al bot de SAGA (Sistema Automatizado de Gestión Arbitral).\n\n" +
-            "Soy tu asistente para consultas sobre arbitraje.\n\n" +
-            "*¿En qué puedo ayudarte?*\n\n" +
-            "• 📋 Consultar tu información\n" +
-            "• ⚽ Ver tus partidos\n" +
-            "• 📅 Gestionar disponibilidad\n" +
-            "• 📞 Buscar contactos\n\n" +
-            "Usa los botones del menú o escribe /ayuda para más información.",
-            userName
-        );
+    private String procesarSaludo(String chatId, String userName, String phoneNumber) {
+        // Verificar si ya está autenticado
+        if (authService.isUsuarioAutenticado(chatId)) {
+            Arbitro arbitro = authService.getArbitroAutenticado(chatId);
+            return String.format("""
+                   👋 *¡Hola de nuevo, %s!*
+                   
+                   Ya estás autenticado en el sistema SAGA.
+                   
+                   ¿En qué puedo ayudarte hoy?
+                   
+                   📋 /info - Ver tu información
+                   ⚽ /partidos - Tus próximos partidos  
+                   📅 /disponibilidad - Gestionar disponibilidad
+                   📞 /contactos - Directorio de árbitros
+                   ❓ /ayuda - Ver todos los comandos
+                   """, arbitro.getNombre().split(" ")[0]);
+        }
+        
+        // Solicitar cédula directamente (sin número de teléfono)
+        authService.iniciarVerificacionPorCedula(chatId);
+        return requestCedulaForAuth(userName);
     }
     
     /**
-     * Genera mensaje de ayuda
+     * Solicita al usuario que ingrese su cédula para autenticación
      */
-    private String generateHelpMessage() {
-        return """
-               🏆 *COMANDOS DISPONIBLES*
+    private String requestCedulaForAuth(String firstName) {
+        return String.format("""
+                Hola *%s* 👋
+                
+                Bienvenido al sistema SAGA de gestión arbitral.
+                
+                Para acceder al sistema, necesito verificar tu identidad.
+                
+                ✏️ Por favor, ingresa tu *número de cédula* (solo números):
+                
+                🔒 *Nota:* Tu cédula debe estar registrada en nuestro sistema de árbitros.
+                """, firstName);
+    }
+    
+    /**
+     * Procesa la verificación por cédula
+     */
+    private String procesarVerificacionCedula(String chatId, String cedula) {
+        AuthResult result = authService.verificarPorCedula(chatId, cedula);
+        
+        switch (result.getStatus()) {
+            case AUTENTICADO:
+                return generateWelcomeMessageAuthenticated(result.getArbitro());
+                
+            case CEDULA_NO_ENCONTRADA:
+                return String.format("""
+                       ❌ *Cédula No Encontrada*
+                       
+                       La cédula *%s* no está registrada en nuestro sistema.
+                       
+                       Verifica el número e intenta de nuevo, o contacta al administrador.
+                       
+                       💡 Puedes intentar con otra cédula o escribir *hola* para reiniciar.
+                       """, cedula);
+                
+            default:
+                return """
+                       ❌ *Error de Verificación*
+                       
+                       Ocurrió un error al verificar tu cédula. 
+                       
+                       Intenta de nuevo o contacta al administrador.
+                       """;
+        }
+    }
+    
+    /**
+     * Genera mensaje de bienvenida para usuario autenticado
+     */
+    private String generateWelcomeMessageAuthenticated(Arbitro arbitro) {
+        return String.format("""
+               🏆 *¡Hola %s!* ✅
+               
+               **Bienvenido al sistema SAGA**
+               📋 *Nombre:* %s
+               🆔 *Cédula:* %s  
+               📱 *Teléfono:* %s
+               🏅 *Categoría:* %s
+               ✅ *Estado:* %s
+               
+               **¿En qué puedo ayudarte?**
+               
+               📋 /info - Ver tu información completa
+               ⚽ /partidos - Tus próximos partidos  
+               📅 /disponibilidad - Gestionar disponibilidad
+               📞 /contactos - Directorio de árbitros
+               ❓ /ayuda - Ver todos los comandos
+               🚪 /logout - Cerrar sesión
+               """, 
+               arbitro.getNombre().split(" ")[0],
+               arbitro.getNombre(),
+               arbitro.getCedula(),
+               arbitro.getTelefono(),
+               arbitro.getCategoria(),
+               arbitro.isActivo() ? "Activo" : "Inactivo");
+    }
+    
+    /**
+     * Genera mensaje de ayuda personalizado
+     */
+    private String generateHelpMessage(Arbitro arbitro) {
+        return String.format("""
+               🏆 *COMANDOS DISPONIBLES* - %s
                
                📋 *Información personal:*
-               • `/info` - Ver tus datos como árbitro
-               • `mi info` - Ver tus datos
+               • `/info` - Ver tus datos completos
                
                ⚽ *Partidos:*
                • `partidos` - Ver tus próximos partidos
@@ -132,67 +255,72 @@ public class TelegramMessageProcessor {
                📞 *Contactos:*
                • `contactos` - Buscar contacto de árbitro
                
-               ❓ *Ayuda:*
+               ❓ *Sistema:*
                • `/ayuda` - Ver este mensaje
-               • `/start` - Mensaje de bienvenida
+               • `/logout` - Cerrar sesión
                
-               💡 *También puedes:*
-               • Escribir de forma natural
-               • Usar los botones del menú
-               • Combinar comandos con texto libre
-               
+               💡 *También puedes escribir de forma natural*
                🤖 *Ejemplo:* "¿Cuáles son mis partidos de esta semana?"
+               """, arbitro.getNombre().split(" ")[0]);
+    }
+    
+    /**
+     * Genera información del usuario autenticado
+     */
+    private String generateUserInfo(Arbitro arbitro) {
+        return String.format("""
+               👤 *Información Completa*
+               
+               📝 *Nombre:* %s
+               🆔 *Cédula:* %s  
+               📱 *Teléfono:* %s
+               🏅 *Categoría:* %s
+               ✅ *Estado:* %s
+               🤖 *Vinculado a Telegram:* ✅
+               
+               💡 *Nota:* Tu información está sincronizada con el sistema SAGA.
+               """, 
+               arbitro.getNombre(),
+               arbitro.getCedula(),
+               arbitro.getTelefono(),
+               arbitro.getCategoria(),
+               arbitro.isActivo() ? "Activo" : "Inactivo");
+    }
+    
+    private String generatePartidosMessage(Arbitro arbitro) {
+        return String.format("""
+               ⚽ *Mis Próximos Partidos* - %s
+               
+               Funcionalidad en desarrollo.
+               Aquí podrás ver:
+               • Partidos asignados
+               • Fechas y horarios
+               • Equipos participantes
+               • Ubicación de canchas
+               """, arbitro.getNombre().split(" ")[0]);
+    }
+    
+    private String generateDisponibilidadMessage(Arbitro arbitro) {
+        return String.format("""
+               📅 *Gestión de Disponibilidad* - %s
+               
+               Funcionalidad en desarrollo.
+               Aquí podrás:
+               • Marcar tu disponibilidad
+               • Ver calendario de fechas
+               • Actualizar horarios libres
+               """, arbitro.getNombre().split(" ")[0]);
+    }
+    
+    private String generateContactosMessage() {
+        return """
+               📞 *Directorio de Contactos*
+               
+               Funcionalidad en desarrollo.
+               Aquí podrás:
+               • Buscar otros árbitros
+               • Ver información de contacto
+               • Acceder a directorio completo
                """;
-    }
-    
-    /**
-     * Genera información del usuario
-     */
-    private String generateUserInfo(Long chatId, String userName) {
-        try {
-            // Buscar árbitro por chat ID (implementar en el futuro)
-            // Por ahora intentamos buscar por nombre o retornamos info genérica
-            
-            String rutaArchivo = "src/main/resources/data/Arbitros.xlsx";
-            // TODO: Implementar búsqueda por chat ID cuando se almacene
-            
-            return String.format(
-                "👤 *Información de Usuario*\n\n" +
-                "📝 *Nombre en Telegram:* %s\n" +
-                "🆔 *Chat ID:* `%s`\n\n" +
-                "❗ *Nota:* Para acceder a tu información completa como árbitro, " +
-                "necesitamos vincular tu cuenta de Telegram con tu registro en SAGA.\n\n" +
-                "Por favor, proporciona tu número de teléfono o cédula para " +
-                "vincular tu cuenta automáticamente.",
-                userName,
-                chatId
-            );
-            
-        } catch (Exception e) {
-            logger.warning("Error obteniendo información del usuario: " + e.getMessage());
-            return "❌ Error obteniendo tu información.\n\n" +
-                   "Por favor, intenta más tarde o contacta al administrador.";
-        }
-    }
-    
-    /**
-     * Busca un árbitro por diferentes criterios
-     */
-    private Arbitro buscarArbitro(String criterio) {
-        try {
-            String rutaArchivo = "src/main/resources/data/Arbitros.xlsx";
-            
-            // Intentar búsqueda por teléfono
-            if (criterio.matches("\\d+")) {
-                return ExcelArbitroWriter.buscarPorTelefono(rutaArchivo, criterio);
-            }
-            
-            // TODO: Implementar búsqueda por nombre, cédula, etc.
-            return null;
-            
-        } catch (Exception e) {
-            logger.warning("Error buscando árbitro: " + e.getMessage());
-            return null;
-        }
     }
 }
