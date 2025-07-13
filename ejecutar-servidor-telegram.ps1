@@ -2,7 +2,7 @@ Write-Host "Iniciando Servidor SAGA con Bot Telegram..." -ForegroundColor Green
 Write-Host ""
 
 # Establecer ubicacion del proyecto
-Set-Location "d:\uni\Ing Software\Projecto\projecto\SAGA"
+Set-Location "d:\uni\Ing Software\Projecto\Projecto\SAGA"
 
 # Compilar proyecto
 Write-Host "Compilando proyecto..." -ForegroundColor Yellow
@@ -28,4 +28,4 @@ Write-Host ""
 Write-Host "Iniciando servidor Spring Boot con Bot Telegram..." -ForegroundColor Yellow
 Write-Host "===============================================" -ForegroundColor Green
 
-mvn spring-boot:run "-Dspring-boot.run.main-class=com.saga.telegram.TelegramBotApplication"
+& mvn spring-boot:run "-Dspring-boot.run.main-class=com.saga.telegram.TelegramBotApplication"
