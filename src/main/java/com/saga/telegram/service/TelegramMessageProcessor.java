@@ -21,7 +21,13 @@ public class TelegramMessageProcessor {
      */
     public String processMessage(String messageText, Long chatId, String userName, String userHandle, String phoneNumber) {
         if (messageText == null || messageText.trim().isEmpty()) {
-            return "🤔 No entendí tu mensaje. Escribe /ayuda para ver los comandos disponibles.";
+            return """
+                   🤔 ¡Hola! Soy **SAGA**, tu asistente de gestión arbitral.
+                   
+                   Parece que no recibí ningún mensaje. ¿Podrías intentar de nuevo?
+                   
+                   💡 Escribe `/ayuda` para ver todos los comandos disponibles.
+                   """;
         }
         
         String chatIdStr = chatId.toString();
@@ -40,11 +46,13 @@ public class TelegramMessageProcessor {
         // Verificar si el usuario está autenticado para otros comandos
         if (!authService.isUsuarioAutenticado(chatIdStr)) {
             return """
-                   🔒 *No autenticado*
+                   🔒 ¡Hola! Soy **SAGA**, tu asistente de gestión arbitral.
                    
-                   Para usar el bot, primero debes autenticarte.
+                   Para poder ayudarte con tus consultas, primero necesito verificar tu identidad.
                    
                    Escribe *hola* para comenzar el proceso de autenticación.
+                   
+                   💡 Solo árbitros registrados pueden acceder al sistema.
                    """;
         }
         
@@ -67,31 +75,31 @@ public class TelegramMessageProcessor {
             return generateDisponibilidadMessage(arbitro);
         }
         
-        if (text.contains("contacto") || text.contains("contactos")) {
-            return generateContactosMessage();
-        }
-        
         if (text.equals("/logout") || text.equals("salir")) {
             authService.cerrarSesion(chatIdStr);
             return """
-                   👋 *Sesión Cerrada*
+                   👋 ¡Hasta luego! Soy **SAGA**, tu asistente de gestión arbitral.
                    
-                   Has cerrado sesión exitosamente.
+                   Tu sesión ha sido cerrada exitosamente y de forma segura.
                    
-                   Para volver a usar el bot, escribe *hola* para autenticarte nuevamente.
+                   🔐 **Seguridad:** Todos tus datos están protegidos.
+                   
+                   🔄 **Para volver a acceder:** Escribe *hola* cuando quieras autenticarte nuevamente.
+                   
+                   ¡Que tengas un excelente día! 🌟
                    """;
         }
         
         // Comando no reconocido
         return String.format("""
-               🤔 No entendí el comando "*%s*"
+               🤔 ¡Hola! Soy **SAGA**, tu asistente de gestión arbitral.
                
-               Escribe `/ayuda` para ver los comandos disponibles.
+               No he podido entender tu solicitud "*%s*". Pero no te preocupes, estoy aquí para ayudarte.
                
-               💡 *También puedes escribir de forma natural:*
-               • "¿Cuáles son mis partidos?"
-               • "Ver mi información"
-               • "Contactos de árbitros"
+               💡 **Sugerencias:**
+               • Escribe `/ayuda` para ver todos los comandos disponibles
+               
+               🤖 ¿Te puedo asistir con algo específico?
                """, messageText);
     }
     
@@ -112,20 +120,34 @@ public class TelegramMessageProcessor {
                 // Iniciar proceso de verificación por cédula como backup
                 authService.iniciarVerificacionPorCedula(chatIdStr);
                 return String.format("""
-                       📱 *Número no encontrado*
+                       📱 ¡Hola! Soy **SAGA**, tu asistente de gestión arbitral.
                        
-                       Tu número %s no está registrado en nuestro sistema.
+                       No he podido encontrar tu número %s en nuestro sistema de árbitros registrados.
                        
-                       🔐 **Como alternativa, puedes autenticarte con tu cédula:**
+                       🔐 **No hay problema:** Como alternativa, puedes autenticarte con tu cédula.
                        
-                       ✏️ Por favor, ingresa tu *número de cédula*:
+                       ✏️ Por favor, compárteme tu *número de cédula*:
+                       
+                       💡 Solo árbitros registrados pueden acceder al sistema.
                        """, phoneNumber);
                 
             case ERROR:
-                return "❌ Error al validar el número de teléfono. Intenta de nuevo.";
+                return """
+                       ❌ ¡Ups! Soy **SAGA** y he encontrado un problema técnico.
+                       
+                       Ha ocurrido un error al validar tu número de teléfono.
+                       
+                       🔄 Por favor, intenta de nuevo o escribe *hola* para reiniciar.
+                       """;
                 
             default:
-                return "❌ Error de autenticación. Contacta al administrador.";
+                return """
+                       ❌ ¡Hola! Soy **SAGA** y ha ocurrido un error inesperado.
+                       
+                       Por favor, contacta al administrador del sistema para recibir asistencia.
+                       
+                       💡 También puedes intentar escribir *hola* para reiniciar el proceso.
+                       """;
         }
     }
     
@@ -137,17 +159,16 @@ public class TelegramMessageProcessor {
         if (authService.isUsuarioAutenticado(chatId)) {
             Arbitro arbitro = authService.getArbitroAutenticado(chatId);
             return String.format("""
-                   👋 *¡Hola de nuevo, %s!*
+                   👋 ¡Hola de nuevo, %s! Soy **SAGA**, tu asistente de gestión arbitral.
                    
-                   Ya estás autenticado en el sistema SAGA.
+                   Me alegra verte otra vez. Estoy aquí para ayudarte con cualquier consulta sobre tus actividades arbitrales.
                    
-                   ¿En qué puedo ayudarte hoy?
+                   ¿Con qué te puedo asistir hoy?
                    
-                   📋 /info - Ver tu información
-                   ⚽ /partidos - Tus próximos partidos  
-                   📅 /disponibilidad - Gestionar disponibilidad
-                   📞 /contactos - Directorio de árbitros
-                   ❓ /ayuda - Ver todos los comandos
+                   📋 `/info` - Consultar tu información personal
+                   ⚽ `/partidos` - Ver tus próximos partidos asignados
+                   📅 `/disponibilidad` - Gestionar tu disponibilidad
+                   ❓ `/ayuda` - Ver todos los comandos disponibles
                    """, arbitro.getNombre().split(" ")[0]);
         }
         
@@ -161,15 +182,15 @@ public class TelegramMessageProcessor {
      */
     private String requestCedulaForAuth(String firstName) {
         return String.format("""
-                Hola *%s* 👋
+                👋 ¡Hola %s! Soy **SAGA**, tu asistente de gestión arbitral.
                 
-                Bienvenido al sistema SAGA de gestión arbitral.
+                Me complace conocerte y estoy aquí para ayudarte con todo lo relacionado a tus actividades como árbitro.
                 
-                Para acceder al sistema, necesito verificar tu identidad.
+                Para comenzar, necesito verificar tu identidad en nuestro sistema.
                 
-                ✏️ Por favor, ingresa tu *número de cédula* (solo números):
+                ✏️ Por favor, compárteme tu *número de cédula* (solo números):
                 
-                🔒 *Nota:* Tu cédula debe estar registrada en nuestro sistema de árbitros.
+                🔒 *Nota:* Solo árbitros registrados en nuestro sistema pueden acceder.
                 """, firstName);
     }
     
@@ -185,22 +206,29 @@ public class TelegramMessageProcessor {
                 
             case CEDULA_NO_ENCONTRADA:
                 return String.format("""
-                       ❌ *Cédula No Encontrada*
+                       ❌ ¡Hola! Soy **SAGA**, tu asistente de gestión arbitral.
                        
-                       La cédula *%s* no está registrada en nuestro sistema.
+                       No he podido encontrar la cédula *%s* en nuestro sistema de árbitros registrados.
                        
-                       Verifica el número e intenta de nuevo, o contacta al administrador.
+                       🔍 **Verificaciones sugeridas:**
+                       • Confirma que el número esté correcto
+                       • Asegúrate de estar registrado como árbitro
+                       • Contacta al administrador si el problema persiste
                        
-                       💡 Puedes intentar con otra cédula o escribir *hola* para reiniciar.
+                       � Puedes intentar con otra cédula o escribir *hola* para reiniciar.
+                       
+                       🆘 ¿Necesitas ayuda? No dudes en contactar al administrador.
                        """, cedula);
                 
             default:
                 return """
-                       ❌ *Error de Verificación*
+                       ❌ ¡Ups! Soy **SAGA** y ha ocurrido un error técnico.
                        
-                       Ocurrió un error al verificar tu cédula. 
+                       Ha habido un problema al verificar tu cédula.
                        
-                       Intenta de nuevo o contacta al administrador.
+                       🔄 Por favor, intenta de nuevo o contacta al administrador para recibir asistencia.
+                       
+                       💡 También puedes escribir *hola* para reiniciar el proceso.
                        """;
         }
     }
@@ -210,23 +238,24 @@ public class TelegramMessageProcessor {
      */
     private String generateWelcomeMessageAuthenticated(Arbitro arbitro) {
         return String.format("""
-               🏆 *¡Hola %s!* ✅
+               � ¡Excelente, %s! Soy **SAGA**, tu asistente de gestión arbitral.
                
-               **Bienvenido al sistema SAGA**
-               📋 *Nombre:* %s
-               🆔 *Cédula:* %s  
-               📱 *Teléfono:* %s
-               🏅 *Categoría:* %s
-               ✅ *Estado:* %s
+               Tu identidad ha sido verificada exitosamente. Me complace confirmar tus datos:
                
-               **¿En qué puedo ayudarte?**
+               📋 **Información Personal:**
+               • *Nombre:* %s
+               • *Cédula:* %s  
+               • *Teléfono:* %s
+               • *Categoría:* %s
+               • *Estado:* %s
                
-               📋 /info - Ver tu información completa
-               ⚽ /partidos - Tus próximos partidos  
-               📅 /disponibilidad - Gestionar disponibilidad
-               📞 /contactos - Directorio de árbitros
-               ❓ /ayuda - Ver todos los comandos
-               🚪 /logout - Cerrar sesión
+               🤖 **¿Con qué te puedo asistir hoy?**
+               
+               📋 `/info` - Consultar tu información completa
+               ⚽ `/partidos` - Ver tus próximos partidos asignados
+               📅 `/disponibilidad` - Gestionar tu disponibilidad
+               ❓ `/ayuda` - Ver todos los comandos disponibles
+               🚪 `/logout` - Cerrar sesión
                """, 
                arbitro.getNombre().split(" ")[0],
                arbitro.getNombre(),
@@ -241,26 +270,25 @@ public class TelegramMessageProcessor {
      */
     private String generateHelpMessage(Arbitro arbitro) {
         return String.format("""
-               🏆 *COMANDOS DISPONIBLES* - %s
+               🤖 Hola %s, soy **SAGA**, tu asistente de gestión arbitral.
                
-               📋 *Información personal:*
-               • `/info` - Ver tus datos completos
+               Estoy aquí para ayudarte con todas tus necesidades como árbitro. Aquí tienes todos los comandos disponibles:
                
-               ⚽ *Partidos:*
-               • `partidos` - Ver tus próximos partidos
+               📋 **Información Personal:**
+               • `/info` - Ver tus datos completos del sistema
                
-               📅 *Disponibilidad:*
-               • `disponibilidad` - Gestionar tu disponibilidad
+               ⚽ **Gestión de Partidos:**
+               • `partidos` - Consultar tus próximos partidos asignados
+               • `partido` - Información sobre partidos específicos
                
-               📞 *Contactos:*
-               • `contactos` - Buscar contacto de árbitro
+               📅 **Disponibilidad:**
+               • `disponibilidad` - Gestionar tu disponibilidad semanal
                
-               ❓ *Sistema:*
-               • `/ayuda` - Ver este mensaje
-               • `/logout` - Cerrar sesión
+                **Sistema:**
+               • `/ayuda` - Ver este mensaje de ayuda
+               • `/logout` - Cerrar tu sesión de forma segura
                
-               💡 *También puedes escribir de forma natural*
-               🤖 *Ejemplo:* "¿Cuáles son mis partidos de esta semana?"
+               🆘 ¿Necesitas ayuda adicional? No dudes en preguntarme cualquier cosa.
                """, arbitro.getNombre().split(" ")[0]);
     }
     
@@ -269,17 +297,24 @@ public class TelegramMessageProcessor {
      */
     private String generateUserInfo(Arbitro arbitro) {
         return String.format("""
-               👤 *Información Completa*
+               👤 ¡Hola %s! Aquí tienes tu información completa del sistema SAGA:
                
-               📝 *Nombre:* %s
-               🆔 *Cédula:* %s  
-               📱 *Teléfono:* %s
-               🏅 *Categoría:* %s
-               ✅ *Estado:* %s
-               🤖 *Vinculado a Telegram:* ✅
+               📝 **Datos Personales:**
+               • *Nombre Completo:* %s
+               • *Número de Cédula:* %s  
+               • *Teléfono de Contacto:* %s
+               • *Categoría Arbitral:* %s
+               • *Estado en el Sistema:* %s
+               • *Telegram Vinculado:* ✅ Conectado
                
-               💡 *Nota:* Tu información está sincronizada con el sistema SAGA.
+               � **Estado de Sincronización:**
+               Tu información está actualizada y sincronizada con el sistema central SAGA.
+               
+               💡 **¿Necesitas actualizar algún dato?** Contacta con la administración para realizar cambios en tu perfil.
+               
+               🤖 ¿Te puedo ayudar con algo más? Escribe `/ayuda` para ver todas las opciones disponibles.
                """, 
+               arbitro.getNombre().split(" ")[0],
                arbitro.getNombre(),
                arbitro.getCedula(),
                arbitro.getTelefono(),
@@ -289,38 +324,37 @@ public class TelegramMessageProcessor {
     
     private String generatePartidosMessage(Arbitro arbitro) {
         return String.format("""
-               ⚽ *Mis Próximos Partidos* - %s
+               ⚽ ¡Hola %s! Soy **SAGA**, consultando tus partidos asignados...
                
-               Funcionalidad en desarrollo.
-               Aquí podrás ver:
-               • Partidos asignados
-               • Fechas y horarios
-               • Equipos participantes
-               • Ubicación de canchas
+               📅 **Próximos Partidos:**
+               Esta funcionalidad está en desarrollo y pronto estará disponible.
+               
+               🔜 **Pronto podrás ver:**
+               • Calendario completo de tus partidos asignados
+               • Detalles de equipos participantes
+               • Horarios y fechas específicas
+               • Ubicación de canchas y escenarios
+               • Información de contacto de equipos
+               
+               🤖 Mientras tanto, ¿te puedo ayudar con algo más? Escribe `/ayuda` para ver otras opciones.
                """, arbitro.getNombre().split(" ")[0]);
     }
     
     private String generateDisponibilidadMessage(Arbitro arbitro) {
         return String.format("""
-               📅 *Gestión de Disponibilidad* - %s
+               📅 ¡Hola %s! Soy **SAGA**, gestionando tu disponibilidad...
                
-               Funcionalidad en desarrollo.
-               Aquí podrás:
-               • Marcar tu disponibilidad
-               • Ver calendario de fechas
-               • Actualizar horarios libres
+               🗓️ **Gestión de Disponibilidad:**
+               Esta funcionalidad está en desarrollo y pronto estará disponible.
+               
+               🔜 **Pronto podrás:**
+               • Marcar tu disponibilidad semanal
+               • Ver tu calendario de fechas libres
+               • Actualizar horarios disponibles
+               • Recibir notificaciones de nuevas asignaciones
+               • Gestionar conflictos de horarios
+               
+               🤖 ¿Te puedo asistir con algo más mientras tanto? Escribe `/ayuda` para ver otras opciones.
                """, arbitro.getNombre().split(" ")[0]);
-    }
-    
-    private String generateContactosMessage() {
-        return """
-               📞 *Directorio de Contactos*
-               
-               Funcionalidad en desarrollo.
-               Aquí podrás:
-               • Buscar otros árbitros
-               • Ver información de contacto
-               • Acceder a directorio completo
-               """;
     }
 }

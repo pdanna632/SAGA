@@ -88,26 +88,31 @@ public class TelegramNotificationService {
      */
     private String generarMensajeAsignacion(Arbitro arbitro, Partido partido) {
         return String.format("""
-               ⚽ *¡Nueva Asignación de Partido!*
+               🤖 ¡Hola %s! Soy **SAGA**, tu asistente de gestión arbitral.
                
-               Hola *%s*, has sido asignado a un nuevo partido:
+               ⚽ **¡Tienes una nueva asignación de partido!**
                
-               📅 *Fecha:* %s
-               ⏰ *Hora:* %s
-               🏟️ *Categoría:* %s
-               📍 *Municipio:* %s
+               Me complace informarte que has sido designado para arbitrar el siguiente encuentro:
                
-               🆚 *Equipos:*
-               🏠 Local: %s
-               🚌 Visitante: %s
+               📅 **Detalles del Partido:**
+               • *Fecha:* %s
+               • *Hora:* %s
+               • *Categoría:* %s
+               • *Municipio:* %s
                
-               📋 *Detalles:*
-               🆔 ID Partido: %s
-               🏟️ Escenario: %s
+               🆚 **Equipos Participantes:**
+               🏠 *Local:* %s
+               🚌 *Visitante:* %s
                
-               💡 *Recuerda confirmar tu disponibilidad en el sistema SAGA*
+               📋 **Información Adicional:**
+               • *ID del Partido:* %s
+               • *Escenario:* %s
                
-               ¿Necesitas más información? Escribe /info para ver tus datos.
+               💡 **Recordatorio importante:** No olvides confirmar tu disponibilidad en el sistema SAGA.
+               
+               🤖 ¿Necesitas más información? Escribe `/info` para consultar tus datos o `/ayuda` para ver todas las opciones.
+               
+               ¡Que tengas un excelente partido! 🌟
                """,
                arbitro.getNombre().split(" ")[0],
                partido.getFecha(),
@@ -131,15 +136,22 @@ public class TelegramNotificationService {
             }
             
             String mensaje = String.format("""
-                   ⏰ *Recordatorio de Partido*
+                   🤖 ¡Hola %s! Soy **SAGA**, tu asistente de gestión arbitral.
                    
-                   Hola *%s*, tu partido es en *%d horas*:
+                   ⏰ **Recordatorio de Partido Próximo**
                    
-                   📅 %s a las %s
-                   🆚 %s vs %s
-                   📍 %s
+                   Te recuerdo que tienes un partido asignado en *%d horas*:
                    
-                   ¡No olvides llegar con tiempo!
+                   📅 **Detalles del Encuentro:**
+                   • *Fecha y Hora:* %s a las %s
+                   • *Enfrentamiento:* %s vs %s
+                   • *Ubicación:* %s
+                   
+                   ⏰ **¡No olvides llegar con tiempo suficiente!**
+                   
+                   🤖 ¿Necesitas revisar más detalles? Escribe `/info` o `/partidos` para más información.
+                   
+                   ¡Te deseo un excelente partido! 🌟
                    """,
                    arbitro.getNombre().split(" ")[0],
                    horasAntes,
