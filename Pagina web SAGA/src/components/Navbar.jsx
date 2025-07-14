@@ -8,6 +8,7 @@ function Navbar() {
         <li><Link className={styles.link} to="/dashboard">Inicio</Link></li>
         <li><Link className={styles.link} to="/partidos">Partidos</Link></li>
         <li><Link className={styles.link} to="/arbitros">Arbitros</Link></li>
+        <li><Link className={styles.link} to="/asignacion">Asignación</Link></li>
         <li><Link className={styles.link} to="/">Cerrar sesión</Link></li>
       </ul>
     </nav>

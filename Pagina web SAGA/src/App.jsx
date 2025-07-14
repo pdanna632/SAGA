@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Partidos from "./pages/Partidos";
 import Arbitros from "./pages/Arbitros";
+import Asignacion from "./pages/Asignacion";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/partidos" element={<Partidos />} />
         <Route path="/arbitros" element={<Arbitros />} />
+        <Route path="/asignacion" element={<Asignacion />} />
       </Routes>
     </BrowserRouter>
   );
