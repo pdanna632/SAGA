@@ -14,7 +14,7 @@
 ### 📋 **Descripción del Sistema**
 Sistema integral de gestión arbitral que incluye:
 - 🖥️ **Sistema Java tradicional** - Menú de consola completo
-- 🤖 **Bot de WhatsApp Business** - Consultas de árbitros via WhatsApp
+- 🤖 **Bot de Telegram** - Consultas de árbitros via Telegram
 - 🌐 **Servidor web** - Interfaz moderna (en desarrollo)
 
 ### ⚡ **OPCIÓN 1: SISTEMA COMPLETO AUTOMÁTICO**
@@ -31,8 +31,9 @@ Sistema integral de gestión arbitral que incluye:
 
 **Resultado:** Se ejecuta automáticamente:
 - 🖥️ Menú Java tradicional (consola)
-- 🤖 Bot de WhatsApp (si está configurado)
-- 🌐 Servidor web (puerto 8080)
+- 🤖 Bot de Telegram (servidor Spring Boot en puerto 8080)
+- 🌐 Servidor web React (puerto 5173)
+- 🔗 API REST (puerto 8080/api/)
 
 ---
 
@@ -50,17 +51,31 @@ mvn exec:java
 
 ---
 
-### 📱 **OPCIÓN 3: SOLO BOT WHATSAPP**
+### 📱 **OPCIÓN 3: SOLO BOT TELEGRAM**
 
+#### Versión Simple (sin servidor):
 ```powershell
-# Ejecutar solo el bot de WhatsApp
-.\ejecutar-whatsapp-bot.ps1
+# Ejecutar solo el bot de Telegram (versión simple)
+.\ejecutar-telegram-bot.ps1
 ```
 
-**Resultado:** Solo el bot de WhatsApp Business
-- Servidor en `http://localhost:8080`
-- Webhook: `/webhook/whatsapp`
-- Health check: `/webhook/health`
+#### Versión con Servidor (recomendada):
+```powershell
+# Ejecutar bot + servidor Spring Boot + API REST
+.\ejecutar-servidor-telegram.ps1
+```
+
+**O manualmente:**
+```powershell
+mvn clean compile
+mvn spring-boot:run "-Dspring-boot.run.main-class=com.saga.TelegramBotApplication"
+```
+
+**Resultado:** Bot de Telegram + API REST
+- Bot activo en Telegram: @saga_arbitros_bot
+- Servidor Spring Boot: http://localhost:8080
+- API REST: http://localhost:8080/api/
+- Comandos disponibles: /start, /ayuda, /mi_info, /partidos
 
 ---
 
@@ -70,7 +85,7 @@ mvn exec:java
 |--------|---------------|
 | **Opción 1** | Uso completo del sistema (recomendado) |
 | **Opción 2** | Solo necesitas gestión de árbitros/partidos |
-| **Opción 3** | Solo necesitas bot de WhatsApp o desarrollo |
+| **Opción 3** | Solo necesitas bot de Telegram (simple o con servidor) |
 
 ---
 
@@ -85,14 +100,15 @@ mvn exec:java
   - Generación de informes semanales
   - Modificación de disponibilidades
 
-### 🤖 **Bot WhatsApp Business**
+### 🤖 **Bot Telegram**
 - Consultas de información personal de árbitros
-- Comandos: `hola`, `ayuda`, `mi info`, `partidos`
-- Búsqueda automática por número de teléfono
+- Comandos: `/start`, `/ayuda`, `/mi_info`, `/partidos`
+- Búsqueda automática por chat ID de Telegram
 - Respuestas inteligentes y personalizadas
 
 ### 🌐 **Servidor Web**
-- Puerto 8080
+- Puerto 5173 (React frontend)
+- Puerto 8080 (Spring Boot backend + Bot Telegram)
 - Endpoints REST para integraciones
 - Interfaz web moderna (en desarrollo)
 
@@ -110,14 +126,13 @@ mvn --version
 # Descarga desde: https://adoptium.net/
 ```
 
-### ❌ **Error al ejecutar - Bot WhatsApp**
+### ❌ **Error al ejecutar - Bot Telegram**
 ```powershell
-# Verifica Node.js instalado
-node --version
+# Verifica que las credenciales de Telegram estén configuradas
+# Revisa src/main/resources/application.properties
 
-# Si falla, instala Node.js
-# Descarga desde: https://nodejs.org
-.\instalar-dependencias.ps1
+# Si falla la compilación
+mvn clean compile
 ```
 
 ### ❌ **Error Puerto 8080**
@@ -125,10 +140,10 @@ node --version
 - Cambia puerto en `application.properties`
 - Reinicia el sistema
 
-### ❌ **Error WhatsApp Business API**
-- Verifica credenciales en `application.properties`
-- Revisa configuración del webhook en Meta
-- Asegúrate de tener acceso a WhatsApp Business API
+### ❌ **Error Bot de Telegram**
+- Verifica las credenciales en `application.properties`
+- Asegúrate de que el bot esté creado en @BotFather
+- Confirma que el token de Telegram sea válido
 
 ---
 
@@ -136,18 +151,21 @@ node --version
 
 ### **Backend**
 - Java 17 + Maven
+- Spring Boot (servidor API + Bot Telegram)
 - Arquitectura limpia y extensible
 - Manejo de Excel con Apache POI
 
-### **WhatsApp Integration**
-- Baileys (JavaScript/Node.js)
-- QR Code authentication
-- Normalización automática de números
+### **Telegram Integration**
+- TelegramBots API (Java)
+- Integración con Spring Boot
+- Comandos interactivos
+- Autenticación por chat ID
 
 ### **Web**
-- React + Vite
+- React + Vite (puerto 5173)
+- Spring Boot API (puerto 8080)
 - Interfaz moderna y responsiva
-- Puerto 8080
+- Comunicación frontend-backend
 
 ### **Base de Datos**
 - Archivos `.xlsx` como base de datos
@@ -161,13 +179,15 @@ node --version
 ```
 SAGA/
 ├── 📋 README.md                           # Esta guía completa
-├── � README-WhatsApp-Bot.md             # Documentación específica del bot
-├── �🚀 iniciar-saga.ps1                   # EJECUTABLE SISTEMA COMPLETO
-├── 🤖 ejecutar-whatsapp-bot.ps1          # EJECUTABLE SOLO BOT WHATSAPP  
+├── 🚀 iniciar-saga.ps1                   # EJECUTABLE SISTEMA COMPLETO
+├── 🤖 ejecutar-telegram-bot.ps1          # EJECUTABLE BOT TELEGRAM SIMPLE
+├── 🌐 ejecutar-servidor-telegram.ps1     # EJECUTABLE BOT + SERVIDOR
 ├── 📦 instalar-dependencias.ps1          # Instalador de dependencias
 ├── ⚙️ pom.xml                             # Configuración Maven
 ├── 📂 src/main/java/com/saga/             # Código fuente Java original
-├── 📂 src/main/java/com/saga/whatsapp/    # Código fuente Bot WhatsApp
+├── 📂 src/main/java/com/saga/telegram/    # Código fuente Bot Telegram
+├── 📂 src/main/java/com/saga/controller/  # Controladores REST API
+├── 📂 src/main/java/com/saga/service/     # Servicios Spring Boot
 ├── 📂 Pagina web SAGA/                   # Aplicación web React
 └── 📂 target/                            # Archivos compilados
 ```
@@ -179,7 +199,7 @@ SAGA/
 ### **Gestión de Árbitros**
 - ✅ Verificación de identidad del usuario  
 - ✅ Visualización de árbitros disponibles  
-- ✅ Registro automático via WhatsApp
+- ✅ Registro automático via Telegram
 - ✅ Actualización de información de contacto
 
 ### **Gestión de Partidos**
@@ -190,7 +210,7 @@ SAGA/
 
 ### **Reportes y Comunicación**
 - ✅ Generación de informes semanales  
-- ✅ Notificaciones automáticas via WhatsApp
+- ✅ Notificaciones automáticas via Telegram
 - ✅ Exportación de datos
 - ✅ Historial de asignaciones
 
@@ -200,16 +220,16 @@ SAGA/
 
 ### ✅ **COMPLETADO**
 - ✅ Sistema de menú Java funcional
-- ✅ Bot de WhatsApp Business integrado
+- ✅ Bot de Telegram integrado
 - ✅ Gestión completa de árbitros y partidos
 - ✅ Procesamiento de comandos inteligente
-- ✅ Integración con API de WhatsApp Business
+- ✅ Integración con API de Telegram
 - ✅ Scripts de automatización
 - ✅ Documentación completa
 
 ### 🚧 **EN DESARROLLO**
 - Dashboard web completo
-- Gestión de partidos via WhatsApp
+- Gestión de partidos via Telegram
 - Notificaciones automáticas
 - Gestión de disponibilidades via bot
 
@@ -218,7 +238,6 @@ SAGA/
 ## 📞 Soporte y Documentación
 
 ### 📋 **Documentación Adicional**
-- `README-WhatsApp-Bot.md` - Guía completa del bot de WhatsApp
 - `src/main/resources/application.properties` - Configuración del sistema
 
 ### 🆘 **Para problemas o dudas:**
@@ -230,7 +249,7 @@ SAGA/
 ### 🔗 **Enlaces útiles:**
 - [Java 17 Download](https://adoptium.net/)
 - [Node.js Download](https://nodejs.org/)
-- [WhatsApp Business API](https://developers.facebook.com/docs/whatsapp/)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
 - [Maven Installation](https://maven.apache.org/install.html)
 
 ---
@@ -301,9 +320,10 @@ Este proyecto sigue una estructura modular en Java. Cada carpeta contiene lógic
    mvn clean compile
    mvn exec:java
    ```
-4. Para **SOLO bot WhatsApp**:
+4. Para **SOLO bot Telegram**:
    ```bash
-   mvn spring-boot:run
+   mvn clean compile
+   mvn exec:java "-Dexec.mainClass=com.saga.SimpleTelegramBotApplication"
    ```
 
 **🎯 RECOMENDADO**: Usa `.\iniciar-saga.ps1` para ejecutar el sistema completo automáticamente.

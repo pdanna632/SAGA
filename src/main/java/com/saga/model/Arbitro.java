@@ -10,6 +10,7 @@ public class Arbitro {
     private String categoria;
     private boolean activo;
     private List<Disponibilidad> disponibilidades;
+    private String chatId; // Para vincular con Telegram
 
     public Arbitro(String nombre, String cedula, String telefono, String categoria, boolean activo) {
         this.nombre = nombre;
@@ -18,6 +19,7 @@ public class Arbitro {
         this.categoria = categoria;
         this.activo = activo;
         this.disponibilidades = new ArrayList<>();
+        this.chatId = null; // Inicialmente sin vincular
     }
 
     public void agregarDisponibilidad(Disponibilidad disp) {
@@ -57,5 +59,17 @@ public class Arbitro {
     // Setters para actualización
     public void setTelefono(String telefono) {
         this.telefono = telefono;
+    }
+    
+    public void setChatId(String chatId) {
+        this.chatId = chatId;
+    }
+    
+    public String getChatId() {
+        return chatId;
+    }
+    
+    public boolean isVinculadoTelegram() {
+        return chatId != null && !chatId.trim().isEmpty();
     }
 }
