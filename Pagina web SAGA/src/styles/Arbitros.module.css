@@ -1,0 +1,64 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #003366;
+  color: #ffffff;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.main {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4rem;
+  gap: 1rem;
+}
+
+.box {
+  background-color: #ffffff;
+  color: #003366;
+  padding: 1.5rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.tabla {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background-color: rgb(238, 238, 238);
+  color: black; 
+  font-size: 0.95rem;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.tabla th {
+  background-color: #003366;
+  color: white;
+}
+
+.tabla tr:nth-child(even) {
+  background-color: #ffffff;
+}
+
+.tabla button {
+  padding: 0.3rem 0.6rem;
+  border: none;
+  background-color: #0066cc;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
