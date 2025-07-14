@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import styles from "../styles/Asignacion.module.css";
 
+const categoriaOrden = {
+  "D": 1,
+  "C": 2,
+  "B": 3,
+  "A": 4,
+  "FIFA": 5
+};
+
+function esCompatible(categoriaArbitro, categoriaPartido) {
+  return categoriaOrden[categoriaArbitro] >= categoriaOrden[categoriaPartido];
+}
+
 function Asignacion() {
   const [partidos, setPartidos] = useState([]);
   const [arbitros, setArbitros] = useState([]);
@@ -45,17 +57,20 @@ function Asignacion() {
                 <td>{partido.equipoLocal} vs {partido.equipoVisitante}</td>
                 <td>{partido.categoria}</td>
                 <td>
-                  <select
-                    value={asignaciones[partido.id] || ""}
-                    onChange={(e) => handleAsignar(partido.id, e.target.value)}
-                  >
-                    <option value="">Seleccionar Árbitro</option>
-                    {arbitros
-                      .filter((arb) => parseInt(arb.categoria) >= parseInt(partido.categoria))
-                      .map((arb, idx) => (
-                        <option key={idx} value={arb.nombre}>{arb.nombre}</option>
-                      ))}
-                  </select>
+                    <select
+                        value={asignaciones[partido.id] || ""}
+                        onChange={(e) => handleAsignar(partido.id, e.target.value)}
+                        >
+                        <option value="">Seleccionar Árbitro</option>
+                        {arbitros
+                            .filter((arb) => esCompatible(arb.categoria, partido.categoria))
+                            .map((arb, idx) => (
+                            <option key={idx} value={arb.nombre}>
+                                {arb.nombre}
+                            </option>
+                            ))}
+                    </select>
+
                 </td>
               </tr>
             ))}
