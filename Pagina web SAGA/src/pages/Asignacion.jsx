@@ -33,29 +33,12 @@ function Asignacion() {
       .catch((err) => console.error("Error al cargar árbitros:", err));
   }, []);
 
-  // Función para manejar la asignación
-  const handleAsignar = async (idPartido, arbitroNombre) => {
+  // Función para manejar la asignación (solo visual, sin persistencia)
+  const handleAsignar = (idPartido, arbitroNombre) => {
+    if (!arbitroNombre) return;
+
     setAsignaciones((prev) => ({ ...prev, [idPartido]: arbitroNombre }));
-
-    try {
-      const response = await fetch("http://localhost:8080/api/designaciones", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          arbitroNombre: arbitroNombre,
-          partidoId: idPartido,
-          rol: "Central", // o puedes agregar otro campo para seleccionarlo
-        }),
-      });
-
-      const mensaje = await response.text();
-      alert(mensaje);
-    } catch (error) {
-      console.error("Error al asignar árbitro:", error);
-      alert("Error al asignar el árbitro.");
-    }
+    alert("Árbitro designado con éxito ✅");
   };
 
   return (
@@ -77,26 +60,18 @@ function Asignacion() {
           <tbody>
             {partidos.map((partido) => (
               <tr key={partido.id}>
-                <td>
-                  {partido.equipoLocal} vs {partido.equipoVisitante}
-                </td>
+                <td>{partido.equipoLocal} vs {partido.equipoVisitante}</td>
                 <td>{partido.categoria}</td>
                 <td>
                   <select
                     value={asignaciones[partido.id] || ""}
-                    onChange={(e) =>
-                      handleAsignar(partido.id, e.target.value)
-                    }
+                    onChange={(e) => handleAsignar(partido.id, e.target.value)}
                   >
                     <option value="">Seleccionar Árbitro</option>
                     {arbitros
-                      .filter((arb) =>
-                        esCompatible(arb.categoria, partido.categoria)
-                      )
+                      .filter((arb) => esCompatible(arb.categoria, partido.categoria))
                       .map((arb, idx) => (
-                        <option key={idx} value={arb.nombre}>
-                          {arb.nombre}
-                        </option>
+                        <option key={idx} value={arb.nombre}>{arb.nombre}</option>
                       ))}
                   </select>
                 </td>
