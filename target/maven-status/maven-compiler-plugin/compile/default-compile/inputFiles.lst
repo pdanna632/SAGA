@@ -1,6 +1,7 @@
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\service\DesignacionService.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\controller\NotificacionController.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\telegram\SimpleTelegramBotApplication.java
+C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\controller\DesignacionController.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\telegram\config\TelegramConfig.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\model\Disponibilidad.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\telegram\bot\SAGATelegramBot.java
@@ -23,6 +24,7 @@ C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\utils\ExcelArbitroWr
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\utils\ExcelPartidoWriter.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\utils\ExcelDisponibilidadWriter.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\service\ArbitroService.java
+C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\dto\DesignacionRequest.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\utils\ExcelPartidoReader.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\telegram\config\TelegramBotConfiguration.java
 C:\Users\samug\Documents\GitHub\SAGA\src\main\java\com\saga\model\Main.java

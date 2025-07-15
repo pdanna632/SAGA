@@ -1,6 +1,6 @@
 package com.saga.model;
 
-public class Designacion {
+public class Designacion implements java.io.Serializable {
     private Arbitro arbitro;
     private Partido partido;
     private String rol; // "Central" o "Asistente"
@@ -15,6 +15,10 @@ public class Designacion {
         this.partido = partido;
         this.rol = rol;
         this.realizado = realizado;
+    }
+
+    public Designacion() {
+        // Constructor vacío requerido para deserialización
     }
 
     public Arbitro getArbitro() {

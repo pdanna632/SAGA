@@ -3,7 +3,7 @@ package com.saga.model;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Arbitro {
+public class Arbitro implements java.io.Serializable{
     private String nombre;
     private String cedula;
     private String telefono;
@@ -21,6 +21,11 @@ public class Arbitro {
         this.disponibilidades = new ArrayList<>();
         this.chatId = null; // Inicialmente sin vincular
     }
+
+    public Arbitro() {
+    // Constructor vacío requerido para deserialización
+    }
+
 
     public void agregarDisponibilidad(Disponibilidad disp) {
         disponibilidades.add(disp);

@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
-public class Partido {
+public class Partido implements java.io.Serializable{
     private String categoria;
     private String municipio;
     private String equipoLocal;
@@ -31,6 +31,11 @@ public class Partido {
         this.escenario = escenario;
         this.id = id;
     }
+
+    public Partido() {
+    // Constructor vacío requerido para deserialización
+    }
+
 
     public String getCategoria() {
         return categoria;

@@ -13,10 +13,10 @@ import java.util.List;
 public class ArbitroService {
 
     public List<Arbitro> obtenerArbitrosDesdeExcel() {
-    List<Arbitro> arbitros = new ArrayList<>();
+        List<Arbitro> arbitros = new ArrayList<>();
 
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("data/Arbitros.xlsx");
-            Workbook workbook = new XSSFWorkbook(is)) {
+             Workbook workbook = new XSSFWorkbook(is)) {
 
             Sheet hoja = workbook.getSheetAt(0);
 
@@ -44,11 +44,11 @@ public class ArbitroService {
     }
 
     public Arbitro buscarArbitroPorNombre(String nombre) {
-    return obtenerArbitrosDesdeExcel().stream()
-            .filter(a -> a.getNombre().equalsIgnoreCase(nombre))
+        System.out.println("🔍 Buscando árbitro: '" + nombre.trim() + "'");
+
+        return obtenerArbitrosDesdeExcel().stream()
+            .filter(a -> a.getNombre().trim().equalsIgnoreCase(nombre.trim()))
             .findFirst()
             .orElse(null);
-}
-
-
+    }
 }
