@@ -43,4 +43,12 @@ public class ArbitroService {
         return arbitros;
     }
 
+    public Arbitro buscarArbitroPorNombre(String nombre) {
+    return obtenerArbitrosDesdeExcel().stream()
+            .filter(a -> a.getNombre().equalsIgnoreCase(nombre))
+            .findFirst()
+            .orElse(null);
+}
+
+
 }

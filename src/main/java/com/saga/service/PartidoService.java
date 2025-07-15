@@ -78,4 +78,12 @@ public class PartidoService {
     public List<Partido> obtenerTodosLosPartidos() {
         return obtenerPartidosDesdeExcel();
     }
+
+    public Partido buscarPartidoPorId(String id) {
+    return obtenerPartidosDesdeExcel().stream()
+            .filter(p -> p.getId().equals(id))
+            .findFirst()
+            .orElse(null);
+}
+
 }
