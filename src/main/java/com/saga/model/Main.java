@@ -239,9 +239,9 @@ public class Main {
 
             modificarDisponibilidad(arbitro);
 
-            System.out.print("¿Desea modificar otro árbitro? (y/n): ");
-            String respuesta = scanner.nextLine();
-            if (!respuesta.equalsIgnoreCase("y")) {
+            System.out.print("¿Desea modificar otro árbitro? (s/n): ");
+            String respuesta = scanner.nextLine().trim().toLowerCase();
+            if (!respuesta.equals("s") && !respuesta.equals("si") && !respuesta.equals("sí") && !respuesta.equals("1")) {
                 break;
             }
         }
@@ -303,18 +303,16 @@ public class Main {
                 System.out.println("Error al modificar la disponibilidad: " + e.getMessage());
             }
 
-            System.out.print("¿Desea modificar otro día para este árbitro? (1=Sí, 2=No): ");
-            int respuesta = scanner.nextInt();
-            scanner.nextLine();
-            if (respuesta != 1) {
+            System.out.print("¿Desea modificar otro día para este árbitro? (s/n): ");
+            String respuesta = scanner.nextLine().trim().toLowerCase();
+            if (!respuesta.equals("s") && !respuesta.equals("si") && !respuesta.equals("sí") && !respuesta.equals("1")) {
                 break;
             }
         }
 
-        System.out.print("¿Desea guardar los cambios en el archivo Excel? (1=Sí, 2=No): ");
-        int confirmacion = scanner.nextInt();
-        scanner.nextLine();
-        if (confirmacion == 1) {
+        System.out.print("¿Desea guardar los cambios en el archivo Excel? (s/n): ");
+        String confirmacion = scanner.nextLine().trim().toLowerCase();
+        if (confirmacion.equals("s") || confirmacion.equals("si") || confirmacion.equals("sí") || confirmacion.equals("1")) {
             ExcelDisponibilidadWriter.actualizarDisponibilidadArbitro(rutaArchivo, arbitro);
             System.out.println("Cambios guardados en el archivo Excel.");
         } else {
