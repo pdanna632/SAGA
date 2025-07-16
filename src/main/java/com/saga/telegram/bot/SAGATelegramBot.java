@@ -38,6 +38,7 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
     
     @Override
     public void onUpdateReceived(Update update) {
+        // Manejar mensajes de texto
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             Long chatId = update.getMessage().getChatId();
@@ -54,13 +55,23 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
             
             try {
                 String response = messageProcessor.processMessage(messageText, chatId, firstName, username, phoneNumber);
-                sendMessage(chatId, response);
+                
+                // Determinar qué botones mostrar según la respuesta
+                org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
+                if (response.contains("Modificar Disponibilidad")) {
+                    buttons = messageProcessor.getDiasButtons();
+                } else {
+                    buttons = messageProcessor.getMenuButtons(chatId);
+                }
+                
+                sendMessageWithButtons(chatId, response, buttons);
             } catch (Exception e) {
                 logger.severe("❌ Error procesando mensaje: " + e.getMessage());
                 sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu mensaje. Intenta de nuevo.");
             }
+            
+        // Manejar contactos compartidos
         } else if (update.hasMessage() && update.getMessage().hasContact()) {
-            // Manejar cuando el usuario comparte su contacto
             Long chatId = update.getMessage().getChatId();
             String firstName = update.getMessage().getFrom().getFirstName();
             String username = update.getMessage().getFrom().getUserName();
@@ -70,10 +81,42 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
             
             try {
                 String response = messageProcessor.processContact(phoneNumber, chatId, firstName);
-                sendMessage(chatId, response);
+                sendMessageWithButtons(chatId, response, messageProcessor.getMenuButtons(chatId));
             } catch (Exception e) {
                 logger.severe("❌ Error procesando contacto: " + e.getMessage());
                 sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu contacto. Intenta de nuevo.");
+            }
+            
+        // Manejar callbacks de botones
+        } else if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            Long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String firstName = update.getCallbackQuery().getFrom().getFirstName();
+            Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
+            
+            logger.info("🔘 Botón presionado por " + firstName + " (ID: " + chatId + "): " + callbackData);
+            
+            try {
+                // Responder al callback para quitar el "loading" del botón
+                answerCallbackQuery(update.getCallbackQuery().getId());
+                
+                // Procesar el callback
+                String response = messageProcessor.processCallback(callbackData, chatId, firstName);
+                
+                // Determinar qué botones mostrar según la respuesta
+                org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
+                if (response.contains("Modificar disponibilidad")) {
+                    buttons = messageProcessor.getDiasButtons();
+                } else {
+                    buttons = messageProcessor.getMenuButtons(chatId);
+                }
+                
+                // Editar el mensaje con la nueva respuesta y botones
+                editMessageWithButtons(chatId, messageId, response, buttons);
+                
+            } catch (Exception e) {
+                logger.severe("❌ Error procesando callback: " + e.getMessage());
+                answerCallbackQuery(update.getCallbackQuery().getId(), "❌ Error procesando solicitud");
             }
         }
     }
@@ -141,5 +184,82 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
      */
     public void sendMessageWithContactRequest(Long chatId, String text) {
         sendMessageWithContactButton(chatId, text);
+    }
+    
+    /**
+     * Envía mensaje con botones inline
+     */
+    public void sendMessageWithButtons(Long chatId, String text, org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        message.setParseMode("Markdown");
+        
+        if (keyboard != null) {
+            message.setReplyMarkup(keyboard);
+        }
+        
+        try {
+            execute(message);
+            logger.info("✅ Mensaje con botones enviado a " + chatId);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error enviando mensaje con botones: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Edita un mensaje existente con nuevos botones
+     */
+    public void editMessageWithButtons(Long chatId, Integer messageId, String text, org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard) {
+        org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText editMessage = 
+            new org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText();
+        
+        editMessage.setChatId(chatId.toString());
+        editMessage.setMessageId(messageId);
+        editMessage.setText(text);
+        editMessage.setParseMode("Markdown");
+        
+        if (keyboard != null) {
+            editMessage.setReplyMarkup(keyboard);
+        }
+        
+        try {
+            execute(editMessage);
+            logger.info("✅ Mensaje editado con botones para " + chatId);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error editando mensaje: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Responde a un callback query
+     */
+    public void answerCallbackQuery(String callbackQueryId) {
+        org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery answer = 
+            new org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery();
+        answer.setCallbackQueryId(callbackQueryId);
+        
+        try {
+            execute(answer);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error respondiendo callback: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Responde a un callback query con mensaje
+     */
+    public void answerCallbackQuery(String callbackQueryId, String text) {
+        org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery answer = 
+            new org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery();
+        answer.setCallbackQueryId(callbackQueryId);
+        answer.setText(text);
+        answer.setShowAlert(true);
+        
+        try {
+            execute(answer);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error respondiendo callback con texto: " + e.getMessage());
+        }
     }
 }

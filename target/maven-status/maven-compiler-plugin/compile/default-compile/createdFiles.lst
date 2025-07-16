@@ -2,11 +2,12 @@ com\saga\telegram\service\TelegramAuthService.class
 com\saga\utils\ExcelArbitroReader$1.class
 com\saga\telegram\service\TelegramAuthService$AuthResult$Status.class
 com\saga\utils\ExcelDesignacionWriterReader.class
+com\saga\telegram\service\DisponibilidadTelegramService.class
 com\saga\telegram\service\TelegramMessageProcessor$1.class
 com\saga\telegram\service\TelegramMessageProcessor.class
+com\saga\test\TestDisponibilidadTelegram.class
 com\saga\utils\ExcelArbitroWriter.class
 com\saga\dto\DesignacionRequest.class
-com\saga\telegram\SimpleTelegramBotApplication.class
 com\saga\telegram\config\TelegramBotConfiguration.class
 com\saga\telegram\TelegramBotApplication.class
 com\saga\model\AuthResult.class
@@ -23,7 +24,6 @@ com\saga\controller\NotificacionController$AsignacionMultipleRequest.class
 com\saga\model\Disponibilidad.class
 com\saga\service\ArbitroService.class
 com\saga\model\Main.class
-com\saga\telegram\bot\SimpleTelegramBot.class
 com\saga\controller\PartidoController.class
 com\saga\telegram\service\TelegramNotificationService.class
 com\saga\model\Arbitro.class

@@ -16,6 +16,9 @@ public class TelegramMessageProcessor {
     @Autowired
     private TelegramAuthService authService;
     
+    @Autowired
+    private DisponibilidadTelegramService disponibilidadService;
+    
     /**
      * Procesa un mensaje de texto recibido
      */
@@ -73,6 +76,17 @@ public class TelegramMessageProcessor {
         
         if (text.contains("disponibilidad") || text.contains("disponible")) {
             return generateDisponibilidadMessage(arbitro);
+        }
+        
+        // Comandos de modificación de disponibilidad
+        if (text.startsWith("modificar") && (text.contains("disponibilidad") || text.contains("disponible"))) {
+            return iniciarModificacionDisponibilidad(arbitro);
+        }
+        
+        // Procesar comandos de modificación de disponibilidad en formato:
+        // "dia:hora_inicio:hora_fin" (ej: "viernes:10:00:14:00")
+        if (text.contains(":") && esComandoDisponibilidad(text)) {
+            return procesarModificacionDisponibilidad(arbitro, text);
         }
         
         if (text.equals("/logout") || text.equals("salir")) {
@@ -282,9 +296,11 @@ public class TelegramMessageProcessor {
                • `partido` - Información sobre partidos específicos
                
                📅 **Disponibilidad:**
-               • `disponibilidad` - Gestionar tu disponibilidad semanal
+               • `disponibilidad` - Ver tu disponibilidad actual
+               • `modificar disponibilidad` - Cambiar tu disponibilidad
+               • `viernes:10:00:14:00` - Formato directo para modificar
                
-                **Sistema:**
+               🔧 **Sistema:**
                • `/ayuda` - Ver este mensaje de ayuda
                • `/logout` - Cerrar tu sesión de forma segura
                
@@ -341,20 +357,455 @@ public class TelegramMessageProcessor {
     }
     
     private String generateDisponibilidadMessage(Arbitro arbitro) {
+        // Cargar disponibilidades actuales
+        disponibilidadService.cargarDisponibilidadesArbitro(arbitro);
+        
+        String disponibilidadActual = disponibilidadService.obtenerDisponibilidadTexto(arbitro);
+        
         return String.format("""
-               📅 ¡Hola %s! Soy **SAGA**, gestionando tu disponibilidad...
+               %s
                
-               🗓️ **Gestión de Disponibilidad:**
-               Esta funcionalidad está en desarrollo y pronto estará disponible.
+               📝 **Para modificar tu disponibilidad:**
                
-               🔜 **Pronto podrás:**
-               • Marcar tu disponibilidad semanal
-               • Ver tu calendario de fechas libres
-               • Actualizar horarios disponibles
-               • Recibir notificaciones de nuevas asignaciones
-               • Gestionar conflictos de horarios
+               🔧 Escribe: *modificar disponibilidad*
                
-               🤖 ¿Te puedo asistir con algo más mientras tanto? Escribe `/ayuda` para ver otras opciones.
-               """, arbitro.getNombre().split(" ")[0]);
+               O usa el formato directo:
+               `dia:hora_inicio:hora_fin`
+               
+               **Ejemplos:**
+               • `viernes:10:00:14:00`
+               • `sabado:08:00:12:00`
+               • `domingo:14:00:18:00`
+               
+               **Días disponibles:** jueves, viernes, sábado, domingo
+               **Formato hora:** HH:mm (ejemplo: 14:30)
+               
+               💡 Los cambios se guardan automáticamente en Excel.
+               """, disponibilidadActual);
+    }
+    
+    /**
+     * Inicia el proceso de modificación de disponibilidad
+     */
+    private String iniciarModificacionDisponibilidad(Arbitro arbitro) {
+        // Cargar disponibilidades actuales
+        disponibilidadService.cargarDisponibilidadesArbitro(arbitro);
+        
+        String disponibilidadActual = disponibilidadService.obtenerDisponibilidadTexto(arbitro);
+        
+        return String.format("""
+               %s
+               
+               � **Modificar Disponibilidad**
+               
+               Para cambiar tu disponibilidad, usa este formato:
+               `dia:hora_inicio:hora_fin`
+               
+               **Ejemplos válidos:**
+               • `jueves:09:00:13:00`
+               • `viernes:14:00:18:00`
+               • `sabado:08:00:12:00`
+               • `domingo:15:00:19:00`
+               
+               **Instrucciones:**
+               • Días: jueves, viernes, sabado, domingo
+               • Horario: formato 24 horas (HH:mm)
+               • La hora fin debe ser mayor que la hora inicio
+               
+               📝 Escribe tu nueva disponibilidad:
+               """, disponibilidadActual);
+    }
+    
+    /**
+     * Verifica si un texto es un comando de disponibilidad válido
+     */
+    private boolean esComandoDisponibilidad(String text) {
+        String[] partes = text.split(":");
+        if (partes.length != 3) {
+            return false;
+        }
+        
+        String dia = partes[0].trim();
+        String horaInicio = partes[1].trim();
+        String horaFin = partes[2].trim();
+        
+        return disponibilidadService.validarDia(dia) && 
+               disponibilidadService.validarFormatoHora(horaInicio) && 
+               disponibilidadService.validarFormatoHora(horaFin);
+    }
+    
+    /**
+     * Procesa la modificación de disponibilidad
+     */
+    private String procesarModificacionDisponibilidad(Arbitro arbitro, String comando) {
+        try {
+            String[] partes = comando.split(":");
+            if (partes.length != 3) {
+                return """
+                       ❌ **Formato incorrecto**
+                       
+                       Usa el formato: `dia:hora_inicio:hora_fin`
+                       
+                       **Ejemplo:** `viernes:10:00:14:00`
+                       """;
+            }
+            
+            String diaRaw = partes[0].trim();
+            String horaInicio = partes[1].trim();
+            String horaFin = partes[2].trim();
+            
+            // Validar día
+            String dia = disponibilidadService.normalizarDia(diaRaw);
+            if (dia == null) {
+                return String.format("""
+                       ❌ **Día inválido: "%s"**
+                       
+                       Días válidos: jueves, viernes, sábado, domingo
+                       
+                       **Ejemplo:** `viernes:10:00:14:00`
+                       """, diaRaw);
+            }
+            
+            // Validar formato de horas
+            if (!disponibilidadService.validarFormatoHora(horaInicio)) {
+                return String.format("""
+                       ❌ **Hora de inicio inválida: "%s"**
+                       
+                       Usa formato HH:mm (ejemplo: 14:30)
+                       
+                       **Ejemplo:** `viernes:10:00:14:00`
+                       """, horaInicio);
+            }
+            
+            if (!disponibilidadService.validarFormatoHora(horaFin)) {
+                return String.format("""
+                       ❌ **Hora de fin inválida: "%s"**
+                       
+                       Usa formato HH:mm (ejemplo: 14:30)
+                       
+                       **Ejemplo:** `viernes:10:00:14:00`
+                       """, horaFin);
+            }
+            
+            // Cargar disponibilidades actuales
+            disponibilidadService.cargarDisponibilidadesArbitro(arbitro);
+            
+            // Intentar modificar disponibilidad
+            boolean exito = disponibilidadService.modificarDisponibilidad(arbitro, dia, horaInicio, horaFin);
+            
+            if (!exito) {
+                return """
+                       ❌ **Error en la modificación**
+                       
+                       La hora de fin debe ser posterior a la hora de inicio.
+                       
+                       **Ejemplo válido:** `viernes:10:00:14:00`
+                       """;
+            }
+            
+            // Guardar en Excel
+            boolean guardado = disponibilidadService.guardarDisponibilidadEnExcel(arbitro);
+            
+            if (!guardado) {
+                return """
+                       ⚠️ **Disponibilidad modificada parcialmente**
+                       
+                       Los cambios se aplicaron en memoria pero hubo un error al guardar en Excel.
+                       
+                       Contacta al administrador si el problema persiste.
+                       """;
+            }
+            
+            // Éxito total
+            String disponibilidadActualizada = disponibilidadService.obtenerDisponibilidadTexto(arbitro);
+            
+            return String.format("""
+                   ✅ **¡Disponibilidad actualizada exitosamente!**
+                   
+                   📝 **Cambio realizado:**
+                   • **Día:** %s
+                   • **Horario:** %s - %s
+                   
+                   💾 **Estado:** Guardado en Excel ✓
+                   
+                   %s
+                   
+                   💡 Puedes modificar otro día usando el mismo formato.
+                   """, dia, horaInicio, horaFin, disponibilidadActualizada);
+                   
+        } catch (Exception e) {
+            logger.severe("Error procesando modificación de disponibilidad: " + e.getMessage());
+            return """
+                   ❌ **Error inesperado**
+                   
+                   Ha ocurrido un error al procesar tu solicitud.
+                   
+                   Por favor, intenta de nuevo o contacta al administrador.
+                   """;
+        }
+    }
+    
+    /**
+     * Procesa callbacks de botones
+     */
+    public String processCallback(String callbackData, Long chatId, String firstName) {
+        String chatIdStr = chatId.toString();
+        
+        // Verificar autenticación
+        if (!authService.isUsuarioAutenticado(chatIdStr)) {
+            return """
+                   🔒 Tu sesión ha expirado.
+                   
+                   Por favor, envía *hola* para autenticarte nuevamente.
+                   """;
+        }
+        
+        Arbitro arbitro = authService.getArbitroAutenticado(chatIdStr);
+        
+        switch (callbackData) {
+            case "info":
+                return generateUserInfo(arbitro);
+                
+            case "ayuda":
+                return generateHelpMessage(arbitro);
+                
+            case "partidos":
+                return generatePartidosMessage(arbitro);
+                
+            case "disponibilidad":
+                return generateDisponibilidadMessage(arbitro);
+                
+            case "modificar_disponibilidad":
+                return iniciarModificacionDisponibilidad(arbitro);
+                
+            case "menu_principal":
+                return String.format("""
+                       🏆 ¡Hola %s! Soy **SAGA**, tu asistente de gestión arbitral.
+                       
+                       Selecciona una opción del menú:
+                       """, arbitro.getNombre().split(" ")[0]);
+                       
+            case "logout":
+                authService.cerrarSesion(chatIdStr);
+                return """
+                       👋 ¡Hasta luego! Tu sesión ha sido cerrada exitosamente.
+                       
+                       🔄 Para volver a acceder, escribe *hola* cuando quieras autenticarte nuevamente.
+                       """;
+                       
+            // Callbacks para días de la semana
+            case "dia_jueves":
+                return mostrarFormularioDisponibilidad("Jueves", arbitro);
+            case "dia_viernes":
+                return mostrarFormularioDisponibilidad("Viernes", arbitro);
+            case "dia_sabado":
+                return mostrarFormularioDisponibilidad("Sábado", arbitro);
+            case "dia_domingo":
+                return mostrarFormularioDisponibilidad("Domingo", arbitro);
+                
+            default:
+                // Verificar si es un comando de modificación de disponibilidad
+                if (callbackData.startsWith("mod_disp:")) {
+                    return procesarModificacionCallback(callbackData, arbitro);
+                }
+                
+                return """
+                       🤔 Opción no reconocida.
+                       
+                       Por favor, selecciona una de las opciones disponibles.
+                       """;
+        }
+    }
+    
+    /**
+     * Genera botones del menú según el estado del usuario
+     */
+    public org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup getMenuButtons(Long chatId) {
+        String chatIdStr = chatId.toString();
+        
+        // Si no está autenticado, no mostrar botones
+        if (!authService.isUsuarioAutenticado(chatIdStr)) {
+            return null;
+        }
+        
+        // Crear teclado inline
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup();
+        
+        java.util.List<java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton>> rows = 
+            new java.util.ArrayList<>();
+        
+        // Fila 1: Info y Ayuda
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row1 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton infoBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        infoBtn.setText("👤 Mi Info");
+        infoBtn.setCallbackData("info");
+        row1.add(infoBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton helpBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        helpBtn.setText("❓ Ayuda");
+        helpBtn.setCallbackData("ayuda");
+        row1.add(helpBtn);
+        
+        rows.add(row1);
+        
+        // Fila 2: Partidos
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row2 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton partidosBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        partidosBtn.setText("⚽ Mis Partidos");
+        partidosBtn.setCallbackData("partidos");
+        row2.add(partidosBtn);
+        
+        rows.add(row2);
+        
+        // Fila 3: Disponibilidad
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row3 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton dispBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        dispBtn.setText("📅 Ver Disponibilidad");
+        dispBtn.setCallbackData("disponibilidad");
+        row3.add(dispBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton modDispBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        modDispBtn.setText("🔧 Modificar");
+        modDispBtn.setCallbackData("modificar_disponibilidad");
+        row3.add(modDispBtn);
+        
+        rows.add(row3);
+        
+        // Fila 4: Menú principal y Logout
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row4 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton menuBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        menuBtn.setText("🏠 Menú Principal");
+        menuBtn.setCallbackData("menu_principal");
+        row4.add(menuBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton logoutBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        logoutBtn.setText("🚪 Salir");
+        logoutBtn.setCallbackData("logout");
+        row4.add(logoutBtn);
+        
+        rows.add(row4);
+        
+        keyboard.setKeyboard(rows);
+        return keyboard;
+    }
+    
+    /**
+     * Genera botones para seleccionar días de la semana
+     */
+    public org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup getDiasButtons() {
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup();
+        
+        java.util.List<java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton>> rows = 
+            new java.util.ArrayList<>();
+        
+        // Fila 1: Jueves y Viernes
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row1 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton jueBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        jueBtn.setText("📅 Jueves");
+        jueBtn.setCallbackData("dia_jueves");
+        row1.add(jueBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton vieBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        vieBtn.setText("📅 Viernes");
+        vieBtn.setCallbackData("dia_viernes");
+        row1.add(vieBtn);
+        
+        rows.add(row1);
+        
+        // Fila 2: Sábado y Domingo
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row2 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton sabBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        sabBtn.setText("📅 Sábado");
+        sabBtn.setCallbackData("dia_sabado");
+        row2.add(sabBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton domBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        domBtn.setText("📅 Domingo");
+        domBtn.setCallbackData("dia_domingo");
+        row2.add(domBtn);
+        
+        rows.add(row2);
+        
+        // Fila 3: Volver
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row3 = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton backBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        backBtn.setText("⬅️ Volver");
+        backBtn.setCallbackData("menu_principal");
+        row3.add(backBtn);
+        
+        rows.add(row3);
+        
+        keyboard.setKeyboard(rows);
+        return keyboard;
+    }
+    
+    /**
+     * Muestra formulario para modificar disponibilidad de un día específico
+     */
+    private String mostrarFormularioDisponibilidad(String dia, Arbitro arbitro) {
+        return String.format("""
+               📅 **Modificar disponibilidad - %s**
+               
+               Para cambiar tu disponibilidad del %s, escribe en el siguiente formato:
+               
+               `%s:hora_inicio:hora_fin`
+               
+               **Ejemplos:**
+               • `%s:09:00:13:00`
+               • `%s:14:00:18:00`
+               • `%s:08:00:12:00`
+               
+               **Instrucciones:**
+               • Usa formato 24 horas (HH:mm)
+               • La hora fin debe ser mayor que la hora inicio
+               • Los cambios se guardan automáticamente
+               
+               📝 Escribe tu nueva disponibilidad:
+               """, dia, dia, dia.toLowerCase(), dia, dia, dia);
+    }
+    
+    /**
+     * Procesa modificación de disponibilidad desde callback
+     */
+    private String procesarModificacionCallback(String callbackData, Arbitro arbitro) {
+        // Formato esperado: "mod_disp:dia:hora_inicio:hora_fin"
+        String[] partes = callbackData.split(":");
+        if (partes.length != 4) {
+            return "❌ Formato de callback inválido.";
+        }
+        
+        String dia = partes[1];
+        String horaInicio = partes[2];
+        String horaFin = partes[3];
+        
+        return procesarModificacionDisponibilidad(arbitro, dia + ":" + horaInicio + ":" + horaFin);
     }
 }
