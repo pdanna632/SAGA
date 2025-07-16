@@ -1,5 +1,8 @@
 package com.saga.telegram.service;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -393,26 +396,31 @@ public class TelegramMessageProcessor {
         
         String disponibilidadActual = disponibilidadService.obtenerDisponibilidadTexto(arbitro);
         
+        // Establecer estado inicial para el usuario (necesitamos el chatId desde el contexto)
+        // El chatId se manejará desde el método que llama a este
+        
         return String.format("""
                %s
                
-               � **Modificar Disponibilidad**
+               🔧 **Modificar Disponibilidad**
                
-               Para cambiar tu disponibilidad, usa este formato:
-               `dia:hora_inicio:hora_fin`
+               A continuación recibirás una poll para seleccionar los días que quieres modificar.
                
-               **Ejemplos válidos:**
-               • `jueves:09:00:13:00`
-               • `viernes:14:00:18:00`
-               • `sabado:08:00:12:00`
-               • `domingo:15:00:19:00`
+               📅 **Proceso:**
+               1. Selecciona los días en la poll
+               2. Presiona 'Confirmar días seleccionados'
+               3. Para cada día seleccionado, elige las franjas horarias en polls separadas
+               4. Confirma tus cambios finales
                
-               **Instrucciones:**
-               • Días: jueves, viernes, sabado, domingo
-               • Horario: formato 24 horas (HH:mm)
-               • La hora fin debe ser mayor que la hora inicio
+               ⏰ **Franjas horarias disponibles (2 horas cada una):**
+               • 08:00 - 10:00
+               • 10:00 - 12:00
+               • 12:00 - 14:00
+               • 14:00 - 16:00
+               • 16:00 - 18:00
+               • 18:00 - 20:00
                
-               📝 Escribe tu nueva disponibilidad:
+               [ENVIAR_POLL_DIAS]
                """, disponibilidadActual);
     }
     
@@ -576,6 +584,9 @@ public class TelegramMessageProcessor {
                 return generateDisponibilidadMessage(arbitro);
                 
             case "modificar_disponibilidad":
+                // Establecer estado inicial
+                estadoModificacion.put(chatIdStr, "SELECCIONANDO_DIAS");
+                diasSeleccionados.remove(chatIdStr);
                 return iniciarModificacionDisponibilidad(arbitro);
                 
             case "menu_principal":
@@ -595,13 +606,42 @@ public class TelegramMessageProcessor {
                        
             // Callbacks para días de la semana
             case "dia_jueves":
-                return mostrarFormularioDisponibilidad("Jueves", arbitro);
+                return iniciarSeleccionFranjas("Jueves", chatIdStr, arbitro);
             case "dia_viernes":
-                return mostrarFormularioDisponibilidad("Viernes", arbitro);
+                return iniciarSeleccionFranjas("Viernes", chatIdStr, arbitro);
             case "dia_sabado":
-                return mostrarFormularioDisponibilidad("Sábado", arbitro);
+                return iniciarSeleccionFranjas("Sábado", chatIdStr, arbitro);
             case "dia_domingo":
-                return mostrarFormularioDisponibilidad("Domingo", arbitro);
+                return iniciarSeleccionFranjas("Domingo", chatIdStr, arbitro);
+                
+            // Callbacks para selección múltiple de días
+            case "seleccionar_dia_jueves":
+                return toggleDiaSeleccionado("Jueves", chatIdStr);
+            case "seleccionar_dia_viernes":
+                return toggleDiaSeleccionado("Viernes", chatIdStr);
+            case "seleccionar_dia_sabado":
+                return toggleDiaSeleccionado("Sábado", chatIdStr);
+            case "seleccionar_dia_domingo":
+                return toggleDiaSeleccionado("Domingo", chatIdStr);
+                
+            // Callbacks para confirmar selecciones de polls
+            case "confirmar_dias_poll":
+                return confirmarDiasYEnviarPrimeraFranja(chatIdStr, arbitro);
+                
+            case "confirmar_horarios_jueves":
+                return confirmarHorariosYContinuar(chatIdStr, "Jueves", arbitro);
+            case "confirmar_horarios_viernes":
+                return confirmarHorariosYContinuar(chatIdStr, "Viernes", arbitro);
+            case "confirmar_horarios_sabado":
+                return confirmarHorariosYContinuar(chatIdStr, "Sábado", arbitro);
+            case "confirmar_horarios_domingo":
+                return confirmarHorariosYContinuar(chatIdStr, "Domingo", arbitro);
+                
+            case "confirmar_disponibilidad_final":
+                return confirmarDisponibilidadFinal(chatIdStr, arbitro);
+                
+            case "cancelar_modificacion_disponibilidad":
+                return cancelarModificacionCompleta(chatIdStr);
                 
             default:
                 // Verificar si es un comando de modificación de disponibilidad
@@ -807,5 +847,594 @@ public class TelegramMessageProcessor {
         String horaFin = partes[3];
         
         return procesarModificacionDisponibilidad(arbitro, dia + ":" + horaInicio + ":" + horaFin);
+    }
+    
+    // Map para trackear el estado de modificación de disponibilidad de cada usuario
+    private final java.util.Map<String, String> estadoModificacion = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, java.util.Set<String>> franjasSeleccionadas = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    // Estado para rastrear días seleccionados por usuario
+    private final java.util.Map<String, java.util.Set<String>> diasSeleccionados = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    /**
+     * Genera las franjas horarias disponibles
+     */
+    private java.util.List<String> generarFranjasHorarias() {
+        return java.util.Arrays.asList(
+            "08:00 - 10:00",
+            "10:00 - 12:00", 
+            "12:00 - 14:00",
+            "14:00 - 16:00",
+            "16:00 - 18:00",
+            "18:00 - 20:00"
+        );
+    }
+    
+    /**
+     * Convierte franjas seleccionadas a horario continuo
+     */
+    private String[] calcularHorarioContinuo(java.util.Set<String> franjas) {
+        if (franjas.isEmpty()) {
+            return new String[]{"08:00", "08:00"}; // Si no hay franjas, horario vacío
+        }
+        
+        java.util.List<String> franjasOrdenadas = new java.util.ArrayList<>(franjas);
+        java.util.Collections.sort(franjasOrdenadas);
+        
+        String primeraFranja = franjasOrdenadas.get(0);
+        String ultimaFranja = franjasOrdenadas.get(franjasOrdenadas.size() - 1);
+        
+        // Manejar formato "HH:mm - HH:mm" con validación
+        String[] partesPrimera = primeraFranja.split(" - ");
+        String[] partesUltima = ultimaFranja.split(" - ");
+        
+        if (partesPrimera.length < 2 || partesUltima.length < 2) {
+            // Si no tiene el formato esperado, devolver horario por defecto
+            return new String[]{"08:00", "18:00"};
+        }
+        
+        String horaInicio = partesPrimera[0].trim();
+        String horaFin = partesUltima[1].trim();
+        
+        return new String[]{horaInicio, horaFin};
+    }
+    
+    private String iniciarSeleccionFranjas(String dia, String chatId, Arbitro arbitro) {
+        // Guardar el estado de modificación
+        estadoModificacion.put(chatId, dia);
+        
+        // Limpiar franjas anteriores si existen
+        franjasSeleccionadas.put(chatId, new HashSet<>());
+        
+        // Crear mensaje con botones para selección de franjas horarias
+        StringBuilder mensaje = new StringBuilder();
+        mensaje.append("📅 Selecciona las franjas horarias disponibles para ").append(dia).append(":\n\n");
+        mensaje.append("Haz clic en los botones de las franjas en las que estarás disponible:\n\n");
+        mensaje.append("🕐 08:00 - 10:00 → /franja_08_10\n");
+        mensaje.append("🕐 10:00 - 12:00 → /franja_10_12\n");
+        mensaje.append("🕐 12:00 - 14:00 → /franja_12_14\n");
+        mensaje.append("🕐 14:00 - 16:00 → /franja_14_16\n");
+        mensaje.append("🕐 16:00 - 18:00 → /franja_16_18\n");
+        mensaje.append("🕐 18:00 - 20:00 → /franja_18_20\n\n");
+        mensaje.append("Una vez que hayas seleccionado todas las franjas, envía:\n");
+        mensaje.append("📝 /confirmar_disponibilidad - Para guardar los cambios\n");
+        mensaje.append("❌ /cancelar_modificacion - Para cancelar");
+        
+        return mensaje.toString();
+    }
+    
+    /**
+     * Toggle para agregar/quitar franja horaria
+     */
+    private String toggleFranja(String chatId, String franja) {
+        Set<String> franjas = franjasSeleccionadas.get(chatId);
+        if (franjas == null) {
+            return "❌ No hay una modificación de disponibilidad en curso. Usa /modificar_disponibilidad primero.";
+        }
+        
+        if (franjas.contains(franja)) {
+            franjas.remove(franja);
+            return "➖ Franja " + franja + " removida.\n\n📋 Franjas seleccionadas: " + 
+                   (franjas.isEmpty() ? "Ninguna" : String.join(", ", franjas)) + 
+                   "\n\n💡 Continúa seleccionando o envía /confirmar_disponibilidad";
+        } else {
+            franjas.add(franja);
+            return "✅ Franja " + franja + " agregada.\n\n📋 Franjas seleccionadas: " + 
+                   String.join(", ", franjas) + 
+                   "\n\n💡 Continúa seleccionando o envía /confirmar_disponibilidad";
+        }
+    }
+    
+    private String toggleFranjaDia(String chatId, String dia, String franja) {
+        String key = chatId + "_" + dia;
+        Set<String> franjas = franjasSeleccionadas.get(key);
+        
+        if (franjas == null) {
+            return "❌ No hay modificación en curso para " + dia + ". Usa /modificar_disponibilidad primero.";
+        }
+        
+        if (franjas.contains(franja)) {
+            franjas.remove(franja);
+            return "➖ " + dia + ": Franja " + franja + " removida.\n\n📋 Franjas para " + dia + ": " + 
+                   (franjas.isEmpty() ? "Ninguna" : String.join(", ", franjas));
+        } else {
+            franjas.add(franja);
+            return "✅ " + dia + ": Franja " + franja + " agregada.\n\n📋 Franjas para " + dia + ": " + 
+                   String.join(", ", franjas);
+        }
+    }
+    
+    private String confirmarDisponibilidad(String chatId, Arbitro arbitro) {
+        String dia = estadoModificacion.get(chatId);
+        Set<String> franjas = franjasSeleccionadas.get(chatId);
+        
+        if (dia == null || franjas == null) {
+            return "❌ No hay una modificación de disponibilidad en curso. Usa /modificar_disponibilidad primero.";
+        }
+        
+        try {
+            if (franjas.isEmpty()) {
+                // El árbitro no estará disponible este día
+                disponibilidadService.modificarDisponibilidad(arbitro, dia, "No disponible", "");
+            } else {
+                // Calcular horario continuo desde las franjas seleccionadas
+                String[] horario = calcularHorarioContinuo(franjas);
+                disponibilidadService.modificarDisponibilidad(arbitro, dia, horario[0], horario[1]);
+            }
+            
+            // Limpiar estado
+            estadoModificacion.remove(chatId);
+            franjasSeleccionadas.remove(chatId);
+            
+            return "✅ Disponibilidad actualizada exitosamente para " + dia + ".\n\n" +
+                   "📋 Franjas seleccionadas: " + (franjas.isEmpty() ? "No disponible" : String.join(", ", franjas)) + 
+                   "\n\n💡 Puedes modificar otro día usando /modificar_disponibilidad";
+            
+        } catch (Exception e) {
+            logger.severe("Error confirmando disponibilidad: " + e.getMessage());
+            return "❌ Error al guardar la disponibilidad. Por favor, intenta nuevamente.";
+        }
+    }
+    
+    /**
+     * Confirma la disponibilidad seleccionada por el usuario
+     */
+    private String confirmarDisponibilidadMultiple(String chatId, Arbitro arbitro) {
+        StringBuilder response = new StringBuilder();
+        response.append("💾 **Guardando disponibilidades...**\n\n");
+        
+        boolean hayErrores = false;
+        int diasModificados = 0;
+        
+        // Buscar todas las claves que pertenecen a este usuario
+        for (String key : estadoModificacion.keySet()) {
+            if (key.startsWith(chatId + "_")) {
+                String dia = estadoModificacion.get(key);
+                Set<String> franjas = franjasSeleccionadas.get(key);
+                
+                if (franjas != null) {
+                    try {
+                        if (franjas.isEmpty()) {
+                            disponibilidadService.modificarDisponibilidad(arbitro, dia, "No disponible", "");
+                            response.append("✅ ").append(dia).append(": No disponible\n");
+                        } else {
+                            String[] horario = calcularHorarioContinuo(franjas);
+                            disponibilidadService.modificarDisponibilidad(arbitro, dia, horario[0], horario[1]);
+                            response.append("✅ ").append(dia).append(": ").append(horario[0]).append(" - ").append(horario[1]).append("\n");
+                        }
+                        diasModificados++;
+                    } catch (Exception e) {
+                        response.append("❌ ").append(dia).append(": Error al guardar\n");
+                        hayErrores = true;
+                    }
+                }
+            }
+        }
+        
+        // Limpiar estado
+        estadoModificacion.entrySet().removeIf(entry -> entry.getKey().startsWith(chatId + "_"));
+        franjasSeleccionadas.entrySet().removeIf(entry -> entry.getKey().startsWith(chatId + "_"));
+        
+        response.append("\n");
+        if (hayErrores) {
+            response.append("⚠️ Se completó con algunos errores. Verifica tu disponibilidad.");
+        } else {
+            response.append("🎉 ¡Disponibilidad actualizada exitosamente! (").append(diasModificados).append(" días modificados)");
+        }
+        
+        response.append("\n\n💡 Usa /disponibilidad para ver tus horarios actualizados.");
+        
+        return response.toString();
+    }
+    
+    /**
+     * Cancela la modificación de disponibilidad
+     */
+    private String cancelarModificacion(String chatId) {
+        String dia = estadoModificacion.remove(chatId);
+        franjasSeleccionadas.remove(chatId);
+        
+        if (dia != null) {
+            return "❌ Modificación de disponibilidad para " + dia + " cancelada.\n\n" +
+                   "💡 Puedes iniciar una nueva modificación con /modificar_disponibilidad";
+        } else {
+            return "ℹ️ No había ninguna modificación de disponibilidad en curso.";
+        }
+    }
+    
+    /**
+     * Procesa respuesta de poll para selección de días o franjas horarias
+     */
+    public String processPollAnswer(Long chatId, String userName, List<String> selectedOptions) {
+        try {
+            Arbitro arbitro = authService.getArbitroAutenticado(chatId.toString());
+            if (arbitro == null) {
+                return "❌ Debes autenticarte primero. Envía tu contacto o cédula.";
+            }
+            
+            String chatIdStr = chatId.toString();
+            
+            if (selectedOptions.isEmpty()) {
+                return "❌ No seleccionaste ninguna opción. Intenta de nuevo.";
+            }
+            
+            // Verificar si el usuario está en proceso de modificación
+            String estado = estadoModificacion.get(chatIdStr);
+            
+            if (estado == null || estado.equals("SELECCIONANDO_DIAS")) {
+                // Guardar días seleccionados para este usuario
+                diasSeleccionados.put(chatIdStr, new HashSet<>(selectedOptions));
+                
+                StringBuilder response = new StringBuilder();
+                response.append("✅ **Días seleccionados:** ").append(String.join(", ", selectedOptions)).append("\n\n");
+                response.append("� Ahora presiona **'Confirmar días seleccionados'** para continuar con la selección de horarios.");
+                
+                // Cambiar estado para esperar confirmación
+                estadoModificacion.put(chatIdStr, "ESPERANDO_CONFIRMACION_DIAS");
+                
+                return response.toString();
+                
+            } else if (estado.startsWith("SELECCIONANDO_HORARIOS_")) {
+                // Extraer el día del estado
+                String dia = estado.replace("SELECCIONANDO_HORARIOS_", "");
+                
+                // Guardar franjas seleccionadas para este día
+                String key = chatIdStr + "_" + dia;
+                Set<String> franjas = franjasSeleccionadas.computeIfAbsent(key, k -> new HashSet<>());
+                franjas.clear();
+                franjas.addAll(selectedOptions);
+                
+                StringBuilder response = new StringBuilder();
+                response.append("✅ **Franjas horarias para ").append(dia).append(":**\n");
+                response.append(String.join(", ", selectedOptions)).append("\n\n");
+                response.append("🔔 Presiona **'Confirmar horarios para ").append(dia).append("'** para continuar.");
+                
+                return response.toString();
+            }
+            
+            return "❌ Estado de modificación no reconocido. Usa /modificar_disponibilidad para empezar de nuevo.";
+            
+        } catch (Exception e) {
+            logger.severe("Error procesando respuesta de poll: " + e.getMessage());
+            return "❌ Error procesando tu selección. Intenta de nuevo.";
+        }
+    }
+    
+    /**
+     * Toggle para agregar/quitar día seleccionado
+     */
+    private String toggleDiaSeleccionado(String dia, String chatId) {
+        Set<String> dias = diasSeleccionados.computeIfAbsent(chatId, k -> new HashSet<>());
+        
+        if (dias.contains(dia)) {
+            dias.remove(dia);
+        } else {
+            dias.add(dia);
+        }
+        
+        StringBuilder response = new StringBuilder();
+        response.append("📅 **Días seleccionados:** ");
+        
+        if (dias.isEmpty()) {
+            response.append("Ninguno");
+        } else {
+            response.append(String.join(", ", dias));
+        }
+        
+        response.append("\n\n");
+        
+        if (!dias.isEmpty()) {
+            response.append("✅ Cuando termines de seleccionar, usa /confirmar_dias para continuar.\n");
+            response.append("O sigue seleccionando más días.\n\n");
+        }
+        
+        response.append("💡 Selecciona/deselecciona días usando los botones de arriba.");
+        
+        return response.toString();
+    }
+    
+    private String confirmarDiasSeleccionados(String chatId, Arbitro arbitro) {
+        Set<String> dias = diasSeleccionados.get(chatId);
+        
+        if (dias == null || dias.isEmpty()) {
+            return "❌ No has seleccionado ningún día. Usa los botones de arriba para seleccionar días.";
+        }
+        
+        StringBuilder response = new StringBuilder();
+        response.append("✅ Días confirmados: ").append(String.join(", ", dias)).append("\n\n");
+        response.append("🕐 Ahora selecciona las franjas horarias para cada día:\n\n");
+        
+        // Limpiar selección anterior y preparar para cada día
+        diasSeleccionados.remove(chatId);
+        
+        // Configurar estado para cada día
+        for (String dia : dias) {
+            estadoModificacion.put(chatId + "_" + dia, dia);
+            franjasSeleccionadas.put(chatId + "_" + dia, new HashSet<>());
+            
+            response.append("📅 **").append(dia).append("**:\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_08_10 → 08:00-10:00\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_10_12 → 10:00-12:00\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_12_14 → 12:00-14:00\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_14_16 → 14:00-16:00\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_16_18 → 16:00-18:00\n");
+            response.append("• /franja_").append(dia.toLowerCase()).append("_18_20 → 18:00-20:00\n\n");
+        }
+        
+        response.append("Cuando termines de seleccionar todas las franjas:\n");
+        response.append("📝 /confirmar_disponibilidad_multiple → Guardar todos los cambios\n");
+        response.append("❌ /cancelar_modificacion → Cancelar");
+        
+        return response.toString();
+    }
+    
+    /**
+     * Confirma los días seleccionados y envía la primera poll de franjas horarias
+     */
+    private String confirmarDiasYEnviarPrimeraFranja(String chatId, Arbitro arbitro) {
+        Set<String> dias = diasSeleccionados.get(chatId);
+        
+        if (dias == null || dias.isEmpty()) {
+            return """
+                   ❌ No has seleccionado ningún día en la encuesta.
+                   
+                   Por favor:
+                   1. Selecciona los días en la encuesta de arriba
+                   2. Luego presiona este botón para confirmar
+                   
+                   Si no ves la encuesta, usa /modificar_disponibilidad para empezar de nuevo.
+                   """;
+        }
+        
+        // Obtener primer día para enviar poll de franjas
+        String primerDia = dias.iterator().next();
+        
+        // Cambiar estado para seleccionar horarios de este día
+        estadoModificacion.put(chatId, "SELECCIONANDO_HORARIOS_" + primerDia);
+        
+        // Preparar respuesta que incluirá envío de poll de franjas
+        return String.format("""
+               ✅ Días confirmados: %s
+               
+               🕐 Ahora selecciona las franjas horarias para %s.
+               
+               [ENVIAR_POLL_FRANJAS:%s]
+               """, String.join(", ", dias), primerDia, primerDia);
+    }
+    
+    /**
+     * Confirma horarios para un día y continúa con el siguiente día o finaliza
+     */
+    private String confirmarHorariosYContinuar(String chatId, String dia, Arbitro arbitro) {
+        // Verificar que tengamos días seleccionados
+        Set<String> dias = diasSeleccionados.get(chatId);
+        if (dias == null || dias.isEmpty()) {
+            return "❌ Error: No hay días seleccionados. Empieza de nuevo con /modificar_disponibilidad.";
+        }
+        
+        // Guardar las franjas para este día (ya están guardadas en franjasSeleccionadas)
+        String key = chatId + "_" + dia;
+        Set<String> franjas = franjasSeleccionadas.get(key);
+        
+        if (franjas == null || franjas.isEmpty()) {
+            return "❌ No seleccionaste ninguna franja horaria para " + dia + ". Selecciona al menos una.";
+        }
+        
+        // Encontrar el siguiente día
+        java.util.List<String> diasOrdenados = new java.util.ArrayList<>(dias);
+        java.util.Collections.sort(diasOrdenados);
+        
+        int indiceActual = diasOrdenados.indexOf(dia);
+        
+        if (indiceActual + 1 < diasOrdenados.size()) {
+            // Hay más días, continuar con el siguiente
+            String siguienteDia = diasOrdenados.get(indiceActual + 1);
+            estadoModificacion.put(chatId, "SELECCIONANDO_HORARIOS_" + siguienteDia);
+            
+            return String.format("""
+                   ✅ **Horarios para %s confirmados:** %s
+                   
+                   🕐 Ahora selecciona las franjas horarias para **%s**.
+                   
+                   [ENVIAR_POLL_FRANJAS:%s]
+                   """, dia, String.join(", ", franjas), siguienteDia, siguienteDia);
+        } else {
+            // Es el último día, mostrar resumen final
+            return mostrarResumenFinal(chatId, arbitro);
+        }
+    }
+    
+    /**
+     * Muestra resumen final y botones de confirmación
+     */
+    private String mostrarResumenFinal(String chatId, Arbitro arbitro) {
+        Set<String> dias = diasSeleccionados.get(chatId);
+        
+        StringBuilder resumen = new StringBuilder();
+        resumen.append("📋 **RESUMEN DE DISPONIBILIDAD**\n\n");
+        
+        for (String dia : dias) {
+            String key = chatId + "_" + dia;
+            Set<String> franjas = franjasSeleccionadas.get(key);
+            
+            resumen.append("📅 **").append(dia).append(":**\n");
+            if (franjas != null && !franjas.isEmpty()) {
+                for (String franja : franjas) {
+                    resumen.append("   ✅ ").append(franja).append("\n");
+                }
+            } else {
+                resumen.append("   ❌ Sin disponibilidad\n");
+            }
+            resumen.append("\n");
+        }
+        
+        resumen.append("¿Confirmas estos cambios en tu disponibilidad?\n\n");
+        resumen.append("✅ Usa el botón **'Confirmar'** para guardar\n");
+        resumen.append("❌ Usa el botón **'Cancelar'** para descartar");
+        
+        // Cambiar estado a esperar confirmación final
+        estadoModificacion.put(chatId, "ESPERANDO_CONFIRMACION_FINAL");
+        
+        return resumen.toString() + "\n\n[MOSTRAR_BOTONES_CONFIRMACION]";
+    }
+    
+    /**
+     * Confirma y guarda la disponibilidad final
+     */
+    private String confirmarDisponibilidadFinal(String chatId, Arbitro arbitro) {
+        try {
+            Set<String> dias = diasSeleccionados.get(chatId);
+            
+            if (dias == null || dias.isEmpty()) {
+                return "❌ No hay cambios para guardar.";
+            }
+            
+            boolean exitoso = true;
+            
+            // Procesar cada día y sus franjas
+            for (String dia : dias) {
+                String key = chatId + "_" + dia;
+                Set<String> franjas = franjasSeleccionadas.get(key);
+                
+                if (franjas != null && !franjas.isEmpty()) {
+                    // Calcular horario continuo desde las franjas seleccionadas
+                    String[] horario = calcularHorarioContinuo(franjas);
+                    boolean resultado = disponibilidadService.modificarDisponibilidad(
+                        arbitro, dia, horario[0], horario[1]
+                    );
+                    if (!resultado) {
+                        exitoso = false;
+                    }
+                } else {
+                    // Si no hay franjas seleccionadas, el árbitro no está disponible
+                    boolean resultado = disponibilidadService.modificarDisponibilidad(
+                        arbitro, dia, "No disponible", ""
+                    );
+                    if (!resultado) {
+                        exitoso = false;
+                    }
+                }
+            }
+            
+            // Guardar en Excel
+            if (exitoso) {
+                exitoso = disponibilidadService.guardarDisponibilidadEnExcel(arbitro);
+            }
+            
+            // Limpiar estado
+            limpiarEstadoModificacion(chatId);
+            
+            if (exitoso) {
+                return """
+                       ✅ **¡Disponibilidad actualizada exitosamente!**
+                       
+                       Tus cambios han sido guardados en el sistema y el archivo Excel.
+                       
+                       🔄 Usa /menu para volver al menú principal.
+                       """;
+            } else {
+                return """
+                       ⚠️ **Disponibilidad parcialmente actualizada**
+                       
+                       Algunos cambios no se pudieron guardar completamente.
+                       
+                       🔄 Usa /menu para volver al menú principal.
+                       """;
+            }
+            
+        } catch (Exception e) {
+            logger.severe("Error confirmando disponibilidad final: " + e.getMessage());
+            return "❌ Error guardando los cambios. Intenta de nuevo.";
+        }
+    }
+    
+    /**
+     * Cancela completamente la modificación de disponibilidad
+     */
+    private String cancelarModificacionCompleta(String chatId) {
+        limpiarEstadoModificacion(chatId);
+        
+        return """
+               ❌ **Modificación cancelada**
+               
+               No se realizaron cambios en tu disponibilidad.
+               
+               🔄 Usa /menu para volver al menú principal.
+               """;
+    }
+    
+    /**
+     * Limpia todo el estado de modificación para un usuario
+     */
+    private void limpiarEstadoModificacion(String chatId) {
+        estadoModificacion.remove(chatId);
+        diasSeleccionados.remove(chatId);
+        
+        // Limpiar franjas de todos los días
+        java.util.Iterator<String> iterator = franjasSeleccionadas.keySet().iterator();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            if (key.startsWith(chatId + "_")) {
+                iterator.remove();
+            }
+        }
+    }
+    
+    /**
+     * Convierte formato de franja de poll al formato del sistema
+     */
+    private String convertirFranjaPollaFormato(String franjaPoll) {
+        switch (franjaPoll) {
+            case "Mañana (8:00 - 12:00)":
+                return "08:00-12:00";
+            case "Tarde (14:00 - 18:00)":
+                return "14:00-18:00";
+            case "Noche (18:00 - 22:00)":
+                return "18:00-22:00";
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * Convierte franja de poll a array de horarios [inicio, fin]
+     */
+    private String[] convertirFranjaAHorarios(String franjaPoll) {
+        switch (franjaPoll) {
+            case "08:00 - 10:00":
+                return new String[]{"08:00", "10:00"};
+            case "10:00 - 12:00":
+                return new String[]{"10:00", "12:00"};
+            case "12:00 - 14:00":
+                return new String[]{"12:00", "14:00"};
+            case "14:00 - 16:00":
+                return new String[]{"14:00", "16:00"};
+            case "16:00 - 18:00":
+                return new String[]{"16:00", "18:00"};
+            case "18:00 - 20:00":
+                return new String[]{"18:00", "20:00"};
+            default:
+                return null;
+        }
     }
 }

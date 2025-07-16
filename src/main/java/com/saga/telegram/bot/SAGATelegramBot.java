@@ -1,9 +1,13 @@
 package com.saga.telegram.bot;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.polls.SendPoll;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -56,15 +60,47 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
             try {
                 String response = messageProcessor.processMessage(messageText, chatId, firstName, username, phoneNumber);
                 
-                // Determinar qué botones mostrar según la respuesta
-                org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
-                if (response.contains("Modificar Disponibilidad")) {
-                    buttons = messageProcessor.getDiasButtons();
+                // Verificar si necesita enviar una poll
+                if (response.contains("[ENVIAR_POLL_DIAS]")) {
+                    // Remover el marcador de la respuesta
+                    String cleanResponse = response.replace("[ENVIAR_POLL_DIAS]", "").trim();
+                    
+                    // Enviar mensaje primero sin botones
+                    sendMessage(chatId, cleanResponse);
+                    
+                    // Luego enviar selección de días (que actúa como poll)
+                    sendPollDias(chatId);
+                } else if (response.contains("[ENVIAR_POLL_FRANJAS:")) {
+                    // Extraer el día del marcador
+                    int startIndex = response.indexOf("[ENVIAR_POLL_FRANJAS:") + "[ENVIAR_POLL_FRANJAS:".length();
+                    int endIndex = response.indexOf("]", startIndex);
+                    String dia = response.substring(startIndex, endIndex);
+                    
+                    // Remover el marcador de la respuesta
+                    String cleanResponse = response.replaceAll("\\[ENVIAR_POLL_FRANJAS:[^\\]]+\\]", "").trim();
+                    
+                    // Enviar mensaje primero
+                    sendMessage(chatId, cleanResponse);
+                    
+                    // Luego enviar poll de franjas horarias
+                    sendPollFranjasHorarias(chatId, dia);
+                } else if (response.contains("[MOSTRAR_BOTONES_CONFIRMACION]")) {
+                    // Remover el marcador
+                    String cleanResponse = response.replace("[MOSTRAR_BOTONES_CONFIRMACION]", "").trim();
+                    
+                    // Enviar mensaje con botones de confirmación final
+                    sendMessageWithButtons(chatId, cleanResponse, createConfirmationButtons());
                 } else {
-                    buttons = messageProcessor.getMenuButtons(chatId);
+                    // Determinar qué botones mostrar según la respuesta
+                    org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
+                    if (response.contains("Modificar Disponibilidad")) {
+                        buttons = messageProcessor.getDiasButtons();
+                    } else {
+                        buttons = messageProcessor.getMenuButtons(chatId);
+                    }
+                    
+                    sendMessageWithButtons(chatId, response, buttons);
                 }
-                
-                sendMessageWithButtons(chatId, response, buttons);
             } catch (Exception e) {
                 logger.severe("❌ Error procesando mensaje: " + e.getMessage());
                 sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu mensaje. Intenta de nuevo.");
@@ -87,6 +123,35 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "❌ Lo siento, ocurrió un error procesando tu contacto. Intenta de nuevo.");
             }
             
+        // Manejar respuestas de polls
+        } else if (update.hasPollAnswer()) {
+            String pollId = update.getPollAnswer().getPollId();
+            Long userId = update.getPollAnswer().getUser().getId();
+            List<Integer> optionIds = update.getPollAnswer().getOptionIds();
+            String firstName = update.getPollAnswer().getUser().getFirstName();
+            
+            logger.info("📊 Respuesta de poll recibida de " + firstName + " (ID: " + userId + "): " + optionIds);
+            
+            try {
+                // Convertir IDs de opciones a nombres de días (asumiendo orden: Jueves=0, Viernes=1, Sábado=2, Domingo=3)
+                List<String> diasNombres = Arrays.asList("Jueves", "Viernes", "Sábado", "Domingo");
+                List<String> diasSeleccionados = new ArrayList<>();
+                
+                for (Integer optionId : optionIds) {
+                    if (optionId < diasNombres.size()) {
+                        diasSeleccionados.add(diasNombres.get(optionId));
+                    }
+                }
+                
+                // Procesar la respuesta del poll
+                String response = messageProcessor.processPollAnswer(userId, firstName, diasSeleccionados);
+                if (response != null && !response.isEmpty()) {
+                    sendMessage(userId, response);
+                }
+            } catch (Exception e) {
+                logger.severe("❌ Error procesando respuesta de poll: " + e.getMessage());
+            }
+            
         // Manejar callbacks de botones
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
@@ -103,16 +168,48 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
                 // Procesar el callback
                 String response = messageProcessor.processCallback(callbackData, chatId, firstName);
                 
-                // Determinar qué botones mostrar según la respuesta
-                org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
-                if (response.contains("Modificar disponibilidad")) {
-                    buttons = messageProcessor.getDiasButtons();
+                // Verificar si necesita enviar una poll
+                if (response.contains("[ENVIAR_POLL_DIAS]")) {
+                    // Remover el marcador de la respuesta
+                    String cleanResponse = response.replace("[ENVIAR_POLL_DIAS]", "").trim();
+                    
+                    // Editar mensaje sin botones
+                    editMessageWithButtons(chatId, messageId, cleanResponse, null);
+                    
+                    // Luego enviar selección de días (que actúa como poll)
+                    sendPollDias(chatId);
+                } else if (response.contains("[ENVIAR_POLL_FRANJAS:")) {
+                    // Extraer el día del marcador
+                    int startIndex = response.indexOf("[ENVIAR_POLL_FRANJAS:") + "[ENVIAR_POLL_FRANJAS:".length();
+                    int endIndex = response.indexOf("]", startIndex);
+                    String dia = response.substring(startIndex, endIndex);
+                    
+                    // Remover el marcador de la respuesta
+                    String cleanResponse = response.replaceAll("\\[ENVIAR_POLL_FRANJAS:[^\\]]+\\]", "").trim();
+                    
+                    // Editar mensaje
+                    editMessageWithButtons(chatId, messageId, cleanResponse, null);
+                    
+                    // Luego enviar poll de franjas horarias
+                    sendPollFranjasHorarias(chatId, dia);
+                } else if (response.contains("[MOSTRAR_BOTONES_CONFIRMACION]")) {
+                    // Remover el marcador
+                    String cleanResponse = response.replace("[MOSTRAR_BOTONES_CONFIRMACION]", "").trim();
+                    
+                    // Editar mensaje con botones de confirmación final
+                    editMessageWithButtons(chatId, messageId, cleanResponse, createConfirmationButtons());
                 } else {
-                    buttons = messageProcessor.getMenuButtons(chatId);
+                    // Determinar qué botones mostrar según la respuesta
+                    org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup buttons = null;
+                    if (response.contains("Modificar disponibilidad")) {
+                        buttons = messageProcessor.getDiasButtons();
+                    } else {
+                        buttons = messageProcessor.getMenuButtons(chatId);
+                    }
+                    
+                    // Editar el mensaje con la nueva respuesta y botones
+                    editMessageWithButtons(chatId, messageId, response, buttons);
                 }
-                
-                // Editar el mensaje con la nueva respuesta y botones
-                editMessageWithButtons(chatId, messageId, response, buttons);
                 
             } catch (Exception e) {
                 logger.severe("❌ Error procesando callback: " + e.getMessage());
@@ -261,5 +358,150 @@ public class SAGATelegramBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             logger.severe("❌ Error respondiendo callback con texto: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Envía poll real para seleccionar días de la semana
+     */
+    public void sendPollDias(Long chatId) {
+        SendPoll poll = new SendPoll();
+        poll.setChatId(chatId.toString());
+        poll.setQuestion("📅 ¿Qué días quieres modificar tu disponibilidad?");
+        
+        // Opciones de días
+        List<String> options = Arrays.asList("Jueves", "Viernes", "Sábado", "Domingo");
+        poll.setOptions(options);
+        
+        // Permitir múltiples respuestas
+        poll.setAllowMultipleAnswers(true);
+        
+        // Poll no anónimo
+        poll.setIsAnonymous(false);
+        
+        try {
+            execute(poll);
+            
+            // Enviar botón de confirmación separado
+            org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard = 
+                new org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup();
+            
+            java.util.List<java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton>> rows = 
+                new java.util.ArrayList<>();
+            
+            java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row = 
+                new java.util.ArrayList<>();
+            
+            org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton confirmBtn = 
+                new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+            confirmBtn.setText("✅ Confirmar días seleccionados");
+            confirmBtn.setCallbackData("confirmar_dias_poll");
+            row.add(confirmBtn);
+            
+            rows.add(row);
+            keyboard.setKeyboard(rows);
+            
+            sendMessageWithButtons(chatId, "⬆️ Selecciona los días en la encuesta de arriba y luego presiona confirmar:", keyboard);
+            
+            logger.info("✅ Poll de días enviado a " + chatId);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error enviando poll de días: " + e.getMessage());
+            sendMessage(chatId, "❌ Error enviando encuesta. Intenta de nuevo.");
+        }
+    }
+    
+    /**
+     * Envía poll para seleccionar franjas horarias de un día específico
+     */
+    public void sendPollFranjasHorarias(Long chatId, String dia) {
+        SendPoll poll = new SendPoll();
+        poll.setChatId(chatId.toString());
+        poll.setQuestion("⏰ ¿En qué franjas horarias estás disponible el " + dia + "?");
+        
+        // Opciones de franjas horarias de 2 horas cada una
+        List<String> options = Arrays.asList(
+            "08:00 - 10:00",
+            "10:00 - 12:00",
+            "12:00 - 14:00", 
+            "14:00 - 16:00",
+            "16:00 - 18:00",
+            "18:00 - 20:00"
+        );
+        poll.setOptions(options);
+        
+        // Permitir múltiples respuestas
+        poll.setAllowMultipleAnswers(true);
+        
+        // Poll no anónimo
+        poll.setIsAnonymous(false);
+        
+        try {
+            execute(poll);
+            
+            // Enviar botón de confirmación separado
+            org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard = 
+                new org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup();
+            
+            java.util.List<java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton>> rows = 
+                new java.util.ArrayList<>();
+            
+            java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row = 
+                new java.util.ArrayList<>();
+            
+            org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton confirmBtn = 
+                new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+            confirmBtn.setText("✅ Confirmar horarios para " + dia);
+            
+            // Normalizar día para callback data (sin acentos)
+            String diaCallback = dia.toLowerCase()
+                .replace("á", "a")
+                .replace("é", "e")
+                .replace("í", "i")
+                .replace("ó", "o")
+                .replace("ú", "u");
+            confirmBtn.setCallbackData("confirmar_horarios_" + diaCallback);
+            row.add(confirmBtn);
+            
+            rows.add(row);
+            keyboard.setKeyboard(rows);
+            
+            sendMessageWithButtons(chatId, "⬆️ Selecciona las franjas horarias en la encuesta de arriba y luego presiona confirmar:", keyboard);
+            
+            logger.info("✅ Poll de franjas horarias enviado para " + dia + " a " + chatId);
+        } catch (TelegramApiException e) {
+            logger.severe("❌ Error enviando poll de franjas horarias: " + e.getMessage());
+            sendMessage(chatId, "❌ Error enviando encuesta de horarios. Intenta de nuevo.");
+        }
+    }
+    
+    /**
+     * Crea botones de confirmación final para disponibilidad
+     */
+    private org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup createConfirmationButtons() {
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup keyboard = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup();
+        
+        java.util.List<java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton>> rows = 
+            new java.util.ArrayList<>();
+        
+        // Fila 1: Confirmar y Cancelar
+        java.util.List<org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton> row = 
+            new java.util.ArrayList<>();
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton confirmBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        confirmBtn.setText("✅ Confirmar");
+        confirmBtn.setCallbackData("confirmar_disponibilidad_final");
+        row.add(confirmBtn);
+        
+        org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton cancelBtn = 
+            new org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton();
+        cancelBtn.setText("❌ Cancelar");
+        cancelBtn.setCallbackData("cancelar_modificacion_disponibilidad");
+        row.add(cancelBtn);
+        
+        rows.add(row);
+        keyboard.setKeyboard(rows);
+        
+        return keyboard;
     }
 }
