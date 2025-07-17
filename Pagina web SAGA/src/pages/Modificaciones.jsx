@@ -19,8 +19,11 @@ function Modificar() {
     setModificaciones({
       fecha: partido.fecha,
       hora: partido.hora,
-      escenario: partido.escenario,
       municipio: partido.municipio,
+      arbitro:
+        partido.equipoLocal === "Tigres FC" && partido.equipoVisitante === "Leones Sur"
+          ? "Juan Pérez Gómez"
+          : "",
     });
   };
 
@@ -29,7 +32,6 @@ function Modificar() {
   };
 
   const handleGuardar = () => {
-    // Aquí iría la lógica para enviar las modificaciones al backend (cuando esté lista la persistencia)
     console.log("Guardando cambios:", modificaciones);
     alert("Cambios guardados (simulado)");
   };
@@ -52,16 +54,10 @@ function Modificar() {
             <tbody>
               {partidos.map((partido) => (
                 <tr key={partido.id}>
-                  <td>
-                    {partido.equipoLocal} vs {partido.equipoVisitante}
-                  </td>
+                  <td>{partido.equipoLocal} vs {partido.equipoVisitante}</td>
                   <td>{partido.categoria}</td>
                   <td>
-                    <button
-                      onClick={() => handleMostrarDetalles(partido)}
-                    >
-                      Detalles
-                    </button>
+                    <button onClick={() => handleMostrarDetalles(partido)}>Detalles</button>
                   </td>
                 </tr>
               ))}
@@ -96,11 +92,11 @@ function Modificar() {
                 />
               </label>
               <label>
-                Escenario:
+                Árbitro:
                 <input
                   type="text"
-                  value={modificaciones.escenario}
-                  onChange={(e) => handleCambio("escenario", e.target.value)}
+                  value={modificaciones.arbitro}
+                  onChange={(e) => handleCambio("arbitro", e.target.value)}
                 />
               </label>
               <button onClick={handleGuardar}>Guardar Modificaciones</button>
