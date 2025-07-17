@@ -1,20 +1,7 @@
+// ✅ COMPONENTE: Asignacion.jsx
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import styles from "../styles/Asignacion.module.css";
-
-// Orden de categorías para comparación
-const categoriaOrden = {
-  D: 1,
-  C: 2,
-  B: 3,
-  A: 4,
-  FIFA: 5,
-};
-
-// Función auxiliar para verificar compatibilidad
-function esCompatible(categoriaArbitro, categoriaPartido) {
-  return categoriaOrden[categoriaArbitro] >= categoriaOrden[categoriaPartido];
-}
 
 function Asignacion() {
   const [partidos, setPartidos] = useState([]);
@@ -33,12 +20,28 @@ function Asignacion() {
       .catch((err) => console.error("Error al cargar árbitros:", err));
   }, []);
 
-  // Función para manejar la asignación (solo visual, sin persistencia)
-  const handleAsignar = (idPartido, arbitroNombre) => {
-    if (!arbitroNombre) return;
-
+  const handleAsignar = async (idPartido, arbitroNombre) => {
     setAsignaciones((prev) => ({ ...prev, [idPartido]: arbitroNombre }));
-    alert("Árbitro designado con éxito ✅");
+
+    try {
+      const response = await fetch("http://localhost:8080/api/designaciones", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          arbitroNombre,
+          partidoId: idPartido,
+          rol: "Central",
+        }),
+      });
+
+      const mensaje = await response.text();
+      alert(mensaje);
+    } catch (error) {
+      console.error("Error al asignar árbitro:", error);
+      alert("Error al asignar el árbitro.");
+    }
   };
 
   return (
@@ -69,7 +72,7 @@ function Asignacion() {
                   >
                     <option value="">Seleccionar Árbitro</option>
                     {arbitros
-                      .filter((arb) => esCompatible(arb.categoria, partido.categoria))
+                      .filter((arb) => arb.nombre === "Juan Pérez Gómez")
                       .map((arb, idx) => (
                         <option key={idx} value={arb.nombre}>{arb.nombre}</option>
                       ))}
