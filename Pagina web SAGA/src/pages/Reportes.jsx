@@ -7,16 +7,37 @@ function Reporte() {
   const [visibleReporte, setVisibleReporte] = useState(null);
   const [pqrs, setPqrs] = useState("");
   const [detallesCliente, setDetallesCliente] = useState("");
+  const [arbitrosAsignados, setArbitrosAsignados] = useState({});
 
   useEffect(() => {
     fetch("http://localhost:8080/api/partidos")
       .then((res) => res.json())
-      .then((data) => setPartidos(data))
+      .then((data) => {
+        setPartidos(data);
+
+        // Precargar árbitro solo para Tigres FC vs Leones Sur
+        const inicial = {};
+        data.forEach((p) => {
+          if (
+            p.equipoLocal === "Tigres FC" &&
+            p.equipoVisitante === "Leones Sur"
+          ) {
+            inicial[p.id] = "Juan Perez Gomez";
+          } else {
+            inicial[p.id] = "";
+          }
+        });
+        setArbitrosAsignados(inicial);
+      })
       .catch((err) => console.error("Error cargando partidos:", err));
   }, []);
 
   const toggleReporte = (id) => {
     setVisibleReporte((prev) => (prev === id ? null : id));
+  };
+
+  const handleArbitroChange = (id, value) => {
+    setArbitrosAsignados((prev) => ({ ...prev, [id]: value }));
   };
 
   return (
@@ -36,12 +57,23 @@ function Reporte() {
                 <div className={styles.detalles}>
                   <details>
                     <summary>Detalles (de parte del cuerpo técnico asignado)</summary>
-                    <textarea rows="4" placeholder="Escribe aquí..."></textarea>
+                    <textarea 
+                      rows="4" 
+                      placeholder="Escribe aquí..."
+                      value={"Partido realizado: " + partido.fecha}
+                    />
                   </details>
 
-                  <details>
+                  <details open>
                     <summary>Árbitro(s) asignado(s)</summary>
-                    <textarea rows="2" placeholder="Escribe aquí árbitros asignados..."></textarea>
+                    <textarea
+                      rows="2"
+                      placeholder="Escribe aquí árbitros asignados..."
+                      value={arbitrosAsignados[partido.id] || "Juan Perez Gomez, Categoría B, 3124567890"}
+                      onChange={(e) =>
+                        handleArbitroChange(partido.id, e.target.value)
+                      }
+                    />
                   </details>
 
                   <details>
